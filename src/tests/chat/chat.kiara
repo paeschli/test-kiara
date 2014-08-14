@@ -1,0 +1,135 @@
+namespace * chat
+
+/**
+ * Chat Client/Server Scenario
+ *
+ * This scenario is similar to the Skype/Google Talk-style instant messaging.
+ * Server contains a database of user names along with keys required
+ * for authentication. User is authenticated when both user name and key
+ * match.
+ *
+ * In this scenario user password is used as the key for authentication.
+ * It is not necessarily equal to the password entered by the user
+ * (e.g. it can be a hash of the entered password or a hash of
+ *  the entered password combined with the user name).
+ *
+ * Server provides to the client ChatServer interface for communication.
+ * We do not specify here how client establishes connection to the server.
+ * After connection is established it is in non-authenticated state. In this state
+ * client can only perform a registration or login by calling corresponding functions.
+ * The remaining functions can be only called in the authenticated state, after
+ * successful logging in. In the authenticated state user can logout in order
+ * to login again under a different user name. Logout is performed automatically when
+ * client closes the connection.
+ *
+ * Each called interface function can throw a ChatServerError exception containing
+ * the error code and a message describing the error.
+ *
+ * Following error codes can occur with all functions:
+ *
+ *   INTERNAL_ERROR - Internal server error
+ *
+ * Before users can login to the server they need to register their user name and
+ * password in the server database with the call to registerUser function:
+ *
+ *   void registerUser(string userName, string userPassword)
+ *   throws (ChatServerError error)
+ *
+ * If the user name is already registered INVALID_USER_NAME error is thrown.
+ * If the password is not secure enough (e.g. too short) INVALID_USER_PASSWORD
+ * error is thrown.
+ *
+ * When user is registered, he can login with the call to loginUser function:
+ *
+ *   UserId loginUser(string userName, string userPassword)
+ *   throws (ChatServerError error)
+ *
+ * If connection is in authenticated state INVALID_AUTH_STATE error is thrown.
+ * If passed user name is not registered or if password does not match
+ * AUTHENTICATION_FAILED error is thrown.
+ * If both user name and password match, connection enters authenticated state and
+ * user ID is returned. User ID is valid for this connection until user logs out.
+ * Also in this scenario we assume that server associates user ID with
+ * the connection, so for all subsequent calls client user ID is not passed as an argument.
+ * We don't specify whether user IDs are unique between different connections,
+ * this is up to the implementation of the server. Client can't store user IDs between
+ * the sessions because they can change.
+ * User ID with the value of 0 is reserved and identifies all users.
+ *
+ * Client can log out by calling logoutUser function:
+ *
+ *   void logoutUser() throws (ChatServerError error)
+ *
+ * If connection is in non-authenticated state INVALID_AUTH_STATE error is thrown.
+ * After this call connection is in non-authenticated state.
+ *
+ * Logged in users can send messages either to all users (broadcast message)
+ * or to a specific user:
+ *
+ *   void sendMessage(UserId recipient, string message) throws (ChatServerError error)
+ *
+ * Client needs to know ID of the message recipient or use BROADCAST_MESSAGE ID for
+ * sending message to all users
+ * If connection is in non-authenticated state INVALID_AUTH_STATE error is thrown.
+ * If passed user ID is not known to the server INVALID_USER_ID error is thrown.
+ *
+ * Client can receive messages for the logged in user by calling receiveMessage function:
+ *
+ *   Message receiveMessage() throws (ChatServerError error)
+ *
+ * If connection is in non-authenticated state INVALID_AUTH_STATE error is thrown.
+ * If there are no messages for the logged in user NO_MESSAGES error is thrown.
+ * Otherwise a Message structure containing sender user ID and message text is returned.
+ * In order to receive all messages for the user client calls receiveMessage until
+ * NO_MESSAGES error is thrown.
+ *
+ * Client can map user IDs to user names and vice versa by using getUserIdByName and 
+ * getUserNameById functions:
+ *
+ *   UserId getUserIdByName(string userName) throws (ChatServerError error)
+ *   string getUserNameById(UserId id) throws (ChatServerError error)
+ *
+ * If connection is in non-authenticated state INVALID_AUTH_STATE error is thrown.
+ * getUserIdByName will throw INVALID_USER_NAME error if passed name is unknown.
+ * getUserNameById will throw INVALID_USER_ID error if passed name is unknown.
+ *
+ */
+
+typedef i64 UserId
+const UserId BROADCAST_MESSAGE = 0
+
+enum ErrorCode {
+  INTERNAL_ERROR        = 0,
+  INVALID_USER_ID       = 1,
+  INVALID_USER_NAME     = 2,
+  INVALID_USER_PASSWORD = 3,
+  INVALID_AUTH_STATE    = 4,
+  AUTHENTICATION_FAILED = 5,
+  NO_MESSAGES           = 6
+}
+
+exception ChatServerError {
+    ErrorCode errorCode,
+    string message
+}
+
+struct Message {
+  UserId sender,
+  string message
+}
+
+service ChatServer {
+    void registerUser(string userName, string userPassword) throws (ChatServerError error)
+
+    UserId loginUser(string userName, string userPassword) throws (ChatServerError error)
+
+    void sendMessage(UserId recipient, string message) throws (ChatServerError error)
+
+    UserId getUserIdByName(string userName) throws (ChatServerError error)
+
+    string getUserNameById(UserId id) throws (ChatServerError error)
+
+    Message receiveMessage() throws (ChatServerError error)
+
+    void logoutUser() throws (ChatServerError error)
+}

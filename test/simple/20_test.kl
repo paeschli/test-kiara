@@ -1,0 +1,40 @@
+extern [C] include_file_ctx(ctx:ptr(Context), fileName:ptr(char)):void;
+def include_file(fileName:ptr(char)) include_file_ctx(getContext(), fileName);
+
+include_file("stdlib.kl");
+
+struct IntFloat {
+       a : int;
+       b : float;
+       c : ptr(double);
+};
+
+def intrinsic [llvm] binary . 80 (s:ref(IntFloat), sym:symbol("a")):ref(int)
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable readnone {"
+"entry:"
+"  %r = getelementptr inbounds ${argtype0} %${argname0}, %size_t 0, i32 0"
+"  ret ${rettype} %r"
+"}";
+
+def intrinsic [llvm] binary . 80 (s:ref(IntFloat), sym:symbol("b")):ref(float)
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable readnone {"
+"entry:"
+"  %r = getelementptr inbounds ${argtype0} %${argname0}, %size_t 0, i32 1"
+"  ret ${rettype} %r"
+"}";
+
+def intrinsic [llvm] binary . 80 (s:ref(IntFloat), sym:symbol("c")):ref(ptr(double))
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable readnone {"
+"entry:"
+"  %r = getelementptr inbounds ${argtype0} %${argname0}, %size_t 0, i32 2"
+"  ret ${rettype} %r"
+"}";
+
+def test() {
+    var value:IntFloat in {
+      value.a = 12;
+      print(value.a); newline();
+    };
+};
+
+test();

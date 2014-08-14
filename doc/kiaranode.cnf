@@ -1,0 +1,15 @@
+#
+# kiaranode.cnf
+#
+
+[ req ]
+prompt                  = no
+distinguished_name      = node_distinguished_name
+
+[ node_distinguished_name ]
+commonName              = hurricane
+stateOrProvinceName     = Saarbruecken
+countryName             = DE
+emailAddress            = dmitri.rubinstein@dfki.de
+organizationName        = DFKI GmbH
+organizationalUnitName  = ASR

@@ -1,0 +1,148 @@
+# How to create a local Certificate Authority and sign certificates for
+# KIARA nodes (according to https://help.ubuntu.com/community/OpenSSL#SSL_Certificates):
+
+I) Creating the Certificate Authority:
+======================================
+
+1) Create an initial working environment, for example within your home directory by issuing
+the following command from a terminal prompt:
+
+cd && mkdir -p kiaraCA/signedcerts kiaraCA/private && cd kiaraCA
+
+The above command will place you in a newly-created subdirectory of your home directory named
+kiaraCA, and within this subdirectory, you should have two additional subdirectories named
+signedcerts and private.
+
+Within this initial working environment, the significance of the subdirectories, and their
+contents is as follows:
+
+    ~/kiaraCA : contains CA certificate, certificates database, generated certificates, keys, and requests
+
+    ~/kiaraCA/signedcerts : contains copies of each signed certificate
+
+    ~/kiaraCA/private : contains the private key
+
+
+2) Create an initial certificate database in the ~/kiaraCA subdirectory with the following command
+at a terminal prompt:
+
+
+echo '01' > serial  && touch index.txt
+
+
+3) Download or copy The config-files (caconfig.cnf and kiaranode.cnf) from the KIARA repository
+into kiaraCA. Change certain fields in the file ~/kiaraCA/caconfig.cnf to match your local environment!
+
+
+4) Before creating the CA reset the environment variable OPENSSL_CONF with the following command
+at a terminal prompt:
+
+
+export OPENSSL_CONF=~/kiaraCA/caconfig.cnf
+
+
+
+5) Generate the CA certificate and key with the following command:
+
+
+openssl req -x509 -newkey rsa:2048 -out cacert.pem -outform PEM -days 1825
+
+
+You should be prompted for a password that will be needed to sign kiara-node certificates.
+
+The above process will create a self-signed certificate using PEM format and RSA public/private
+key encryption. The location, and purpose of the resultant files is as follows:
+
+    ~/kiaraCA/cacert.pem : CA public certificate
+
+    ~/kiaraCA/private/cakey.pem : CA private key
+
+
+
+
+
+
+II) Creating a Self-Signed Server Certificate
+=============================================
+
+1) Change certain fields in the file ~/kiaraCA/kiaranode.cnf to match the hostname (and the location)
+of the node for which the certificate will be generated.
+
+Be sure to change the values under node_distinguished_name especially the commonName value.
+The commonName value must match the host name, or CNAME for the host you wish to use the key for.
+
+
+
+2) Reset the environment variable OPENSSL_CONF with the following command at a terminal prompt:
+
+export OPENSSL_CONF=~/kiaraCA/kiaranode.cnf
+
+
+
+3) Generate the certificate, and key:
+
+
+openssl req -newkey rsa:1024 -keyout tempkey.pem -keyform PEM -out tempreq.pem -outform PEM
+
+
+You should be prompted for a password used to encrypt the new private key.
+
+
+
+4) You may translate the temporary private key into an unencrypted key by using the following
+command:
+
+openssl rsa < tempkey.pem > node_key.pem
+
+
+You should be prompted for the password used above.
+
+If you wish to leave the key encrypted with a password, simply rename the temporary key using
+the following command, instead of following the step above:
+
+mv tempkey.pem node_key.pem
+
+In that case you will need this password everytime you want to start the node in a server or client
+role.
+
+
+5) You need to sign the node certificate with the Certificate Authority (CA) key using these commands:
+
+export OPENSSL_CONF=~/kiaraCA/caconfig.cnf
+
+openssl ca -in tempreq.pem -out node_crt.pem
+
+
+You will be prompted for the password of the CA key as created in the Certificate Authority setup
+from above. You will then be prompted to confirm the information in the kiaranode.cnf, and finally
+asked to confirm signing the certificate.
+
+
+6) Remove the temporary certificate, and key files with the following command:
+
+rm -f tempkey.pem tempreq.pem
+
+
+You now have a self-signed server application certificate, and key pair:
+
+    node_crt.pem : node certificate file
+
+    node_key.pem : node key file
+
+
+These files are used (with cacert.pem containing the CA public certificate) to establish
+SSL connections with other nodes that also have certificates issued with the same CA.
+
+7) Create kiara configuration in ~/.kiara/main.cfg :
+
+mkdir ~/.kiara
+cat > ~/.kiara/main.cfg <<EOF
+{
+    "security" : {
+        "host" : "hurricane",
+        "certFile" : "~/kiaraCA/node_crt.pem",
+        "keyFile" : "~/kiaraCA/node_key.pem",
+        "caCertFile" : "~/kiaraCA/cacert.pem"
+    }
+}
+EOF

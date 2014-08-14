@@ -1,0 +1,6 @@
+struct Context;
+
+extern [C] load_module_ctx(ctx:ptr(Context), fileName:ptr(char)):void;
+def load_module(fileName:ptr(char)) load_module_ctx(getContext(), fileName);
+
+load_module("json_process_tool.bc");

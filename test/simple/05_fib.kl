@@ -1,0 +1,94 @@
+def intrinsic [llvm] binary = 2 (a:ref(double), b:double):double
+"define internal double @${mangledName}(double* nocapture %var, double %value) nounwind uwtable { "
+"  store double %value, double* %var "
+"  ret double %value "
+"}";
+
+def intrinsic [llvm] binary = 2 (a:ref(int), b:int):int
+"define internal %int @${mangledName}(%int* nocapture %var, %int %value) nounwind uwtable { "
+"  store %int %value, %int* %var "
+"  ret %int %value "
+"}";
+
+def intrinsic [llvm] printi(a:int):void
+"@.str2 = private unnamed_addr constant [4 x i8] c\"%i\\0A\\00\", align 1"
+"declare i32 @printf(i8* nocapture, ...) nounwind "
+"define void @${mangledName}(i32 %a) nounwind uwtable {"
+"  %call = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.str2, i64 0, i64 0), i32 %a) nounwind"
+"  ret void"
+"}";
+
+def intrinsic leii(a:int, b:int):boolean
+"define zeroext i1 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %cmp = icmp sle i32 %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def intrinsic geii(a:int, b:int):boolean
+"define zeroext i1 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %cmp = icmp sge i32 %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def intrinsic mulii(a:int, b:int):int
+"define i32 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %mul = mul nsw i32 %b, %a"
+"  ret i32 %mul"
+"}";
+
+def intrinsic divii(a:int, b:int):int
+"define i32 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %div = sdiv i32 %a, %b"
+"  ret i32 %div"
+"}";
+
+def intrinsic [llvm] binary < 10 (a:int, b:int):boolean
+"define zeroext i1 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %cmp = icmp slt i32 %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def intrinsic [llvm] binary > 10 (a:int, b:int):boolean
+"define zeroext i1 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %cmp = icmp sgt i32 %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def intrinsic [llvm] binary + 20 (a:int, b:int):int
+"define %int @${mangledName}(%int %a, %int %b) nounwind uwtable readnone {"
+"  %add = add nsw i32 %b, %a"
+"  ret %int %add"
+"}";
+
+def intrinsic [llvm] binary - 20 (a:int, b:int):int
+"define %int @${mangledName}(%int %a, %int %b) nounwind uwtable readnone {"
+"  %sub = sub nsw i32 %a, %b"
+"  ret %int %sub"
+"}";
+
+#def binary * 40 (a:int, b:int) mulii(a,b);
+#def binary / 40 (a:int, b:int) divii(a,b);
+
+# Define ':' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary : 1 (x:int, y:int) y;
+
+# Recursive fib, we could do this before.
+def fib(x:int):int
+  if (x < 3) then
+    1
+  else
+    fib(x-1)+fib(x-2);
+
+# Iterative fib.
+def fibi(x:int)
+  var a:int = 1, b:int = 1, c:int in
+  (for i:int = 3, i < x in
+     c = a + b :
+     a = b :
+     b = c) :
+  b;
+
+# Call it.
+printi(fibi(10));
+printi(fib(10));

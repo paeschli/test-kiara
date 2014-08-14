@@ -1,0 +1,10 @@
+# Function to print a double.
+extern [C] printd(x:double):double;
+
+# Define ':' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary : 1 (x:double, y:double) y;
+
+def test(x:double) printd(10.0);
+
+test(123.0);

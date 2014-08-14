@@ -1,0 +1,3 @@
+Opening connection to http://localhost:8080/service...
+enc.sendInt: result = 321
+enc.sendString: result = data321

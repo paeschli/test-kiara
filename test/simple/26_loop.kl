@@ -1,0 +1,45 @@
+extern [C] include_file_ctx(ctx:ptr(Context), fileName:ptr(char)):void;
+def include_file(fileName:ptr(char)) include_file_ctx(getContext(), fileName);
+
+include_file("stdlib.kl");
+
+def intrinsic [llvm] binary + 20 (a:int, b:int):int
+"define %int @${mangledName}(%int %a, %int %b) nounwind uwtable readnone {"
+"  %add = add nsw i32 %b, %a"
+"  ret %int %add"
+"}";
+
+def intrinsic [llvm] binary > 10 (a:int, b:int):boolean
+"define zeroext i1 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %cmp = icmp sgt i32 %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def test() {
+    var i:int in {
+      i = 0;
+
+      stop1: {
+            loop stop2: {
+                 print("iter\n");
+                 break stop1;
+                 i = i + 1;
+                 print(i);
+                 print("\n");
+            }
+      }
+
+      stop3: {
+            loop stop4: {
+                 if (i > 9) then
+                    break stop3;
+                 print("iter ");
+                 print(i);
+                 print("\n");
+                 i = i + 1;
+            }
+      }
+    }
+}
+
+test();

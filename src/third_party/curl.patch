@@ -1,0 +1,86 @@
+diff --git a/lib/warnless.c b/lib/warnless.c
+index aab95ab..1709871 100644
+--- a/lib/warnless.c
++++ b/lib/warnless.c
+@@ -371,7 +371,7 @@ size_t curlx_sitouz(int sinum)
+ #endif
+ }
+ 
+-#if defined(__INTEL_COMPILER) && defined(__unix__)
++#if (defined(__INTEL_COMPILER) && defined(__unix__)) || defined(KIARA_LLVM)
+ 
+ int curlx_FD_ISSET(int fd, fd_set *fdset)
+ {
+diff --git a/lib/warnless.h b/lib/warnless.h
+index 9d690d6..f541930 100644
+--- a/lib/warnless.h
++++ b/lib/warnless.h
+@@ -22,43 +22,49 @@
+  *
+  ***************************************************************************/
+ 
+-unsigned short curlx_ultous(unsigned long ulnum);
++#if defined(KIARA_LLVM) && defined(_WIN32)
++#define KIARA_EXPORT __declspec(dllexport)
++#else
++#define KIARA_EXPORT
++#endif
++
++KIARA_EXPORT unsigned short curlx_ultous(unsigned long ulnum);
+ 
+-unsigned char curlx_ultouc(unsigned long ulnum);
++KIARA_EXPORT unsigned char curlx_ultouc(unsigned long ulnum);
+ 
+-int curlx_ultosi(unsigned long ulnum);
++KIARA_EXPORT int curlx_ultosi(unsigned long ulnum);
+ 
+-int curlx_uztosi(size_t uznum);
++KIARA_EXPORT int curlx_uztosi(size_t uznum);
+ 
+-unsigned long curlx_uztoul(size_t uznum);
++KIARA_EXPORT unsigned long curlx_uztoul(size_t uznum);
+ 
+-unsigned int curlx_uztoui(size_t uznum);
++KIARA_EXPORT unsigned int curlx_uztoui(size_t uznum);
+ 
+-int curlx_sltosi(long slnum);
++KIARA_EXPORT int curlx_sltosi(long slnum);
+ 
+-unsigned int curlx_sltoui(long slnum);
++KIARA_EXPORT unsigned int curlx_sltoui(long slnum);
+ 
+-unsigned short curlx_sltous(long slnum);
++KIARA_EXPORT unsigned short curlx_sltous(long slnum);
+ 
+-ssize_t curlx_uztosz(size_t uznum);
++KIARA_EXPORT ssize_t curlx_uztosz(size_t uznum);
+ 
+-size_t curlx_sotouz(curl_off_t sonum);
++KIARA_EXPORT size_t curlx_sotouz(curl_off_t sonum);
+ 
+-int curlx_sztosi(ssize_t sznum);
++KIARA_EXPORT int curlx_sztosi(ssize_t sznum);
+ 
+-size_t curlx_sitouz(int sinum);
++KIARA_EXPORT size_t curlx_sitouz(int sinum);
+ 
+-#if defined(__INTEL_COMPILER) && defined(__unix__)
++#if (defined(__INTEL_COMPILER) && defined(__unix__)) || defined(KIARA_LLVM)
+ 
+-int curlx_FD_ISSET(int fd, fd_set *fdset);
++KIARA_EXPORT int curlx_FD_ISSET(int fd, fd_set *fdset);
+ 
+-void curlx_FD_SET(int fd, fd_set *fdset);
++KIARA_EXPORT void curlx_FD_SET(int fd, fd_set *fdset);
+ 
+-void curlx_FD_ZERO(fd_set *fdset);
++KIARA_EXPORT void curlx_FD_ZERO(fd_set *fdset);
+ 
+-unsigned short curlx_htons(unsigned short usnum);
++KIARA_EXPORT unsigned short curlx_htons(unsigned short usnum);
+ 
+-unsigned short curlx_ntohs(unsigned short usnum);
++KIARA_EXPORT unsigned short curlx_ntohs(unsigned short usnum);
+ 
+ #ifndef BUILDING_WARNLESS_C
+ #  undef  FD_ISSET

@@ -1,0 +1,48 @@
+# Function to print a double.
+
+def intrinsic [llvm,always_inline] printd(a:double):void
+"@printd.str = private unnamed_addr constant [3 x i8] c\"%f\\00\" "
+"declare %int @printf(%char_ptr nocapture, ...) nounwind "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable {"
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @printd.str,  %size_t 0,  %size_t 0), ${argtype0} %${argname0})"
+"  ret void"
+"}";
+
+def intrinsic [llvm,always_inline] print(p:ptr(char)):void
+"@prints.str = private unnamed_addr constant [3 x i8] c\"%s\\00\" "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable { "
+"entry:"
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @prints.str, %size_t 0, %size_t 0), ${argtype0} %${argname0}) nounwind "
+"  ret void"
+"}";
+
+def newline() print("\n");
+
+def intrinsic [llvm] binary = 2 (a:ref(double), b:double):double
+"define internal double @${mangledName}(double* nocapture %var, double %value) nounwind uwtable { "
+"  store double %value, double* %var "
+"  ret double %value "
+"}";
+
+def intrinsic [llvm,always_inline] __deref__(v:ref(double)):double
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  %r = load ${argtype0} %${argname0} "
+"  ret ${rettype} %r"
+"} ";
+
+# Define ':' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary : 1 (x:double, y:double):double y;
+def binary : 1 (x:void, y:double):double   y;
+def binary : 1 (x:double, y:void):void y;
+def binary : 1 (x:void, y:void):void y;
+
+def test(x:double)
+  var y:double = x in
+  printd(y) :
+  newline() :
+  y = 4.0 :
+  printd(y) :
+  newline();
+
+test(123.0);

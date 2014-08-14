@@ -1,0 +1,6 @@
+Type: kr_dstring_t is opaque
+
+KIARA DEBUG: Type is struct kr_dstring_t{api.GetCString : any<type:PFvvE>, api.SetCString : any<type:PFvvE>}
+StructTest.pack: result = { ival : 21, sval : "test21" }
+StructTest.getInteger: result = 25
+StructTest.getString: result = test72

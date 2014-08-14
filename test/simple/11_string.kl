@@ -1,0 +1,74 @@
+# Function to print a double.
+extern printd(x:double):double;
+
+def intrinsic [llvm] prints(str:ptr(char)):void
+"@prints.str = private unnamed_addr constant [3 x i8] c\"%s\\00\" "
+"declare i32 @printf(i8* nocapture, ...) nounwind "
+"define void @${mangledName}(i8* %str) nounwind uwtable { "
+"  %call = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @prints.str, i64 0, i64 0), i8* %str) nounwind "
+"  ret void "
+"}";
+
+def intrinsic [llvm] memcpy(dest:ptr(void), src:ptr(void), n:size_t):ptr(void)
+"declare void @llvm.memcpy.p0i8.p0i8.${size_t}(i8* nocapture, i8* nocapture, %size_t, i32, i1) nounwind "
+"define i8* @${mangledName}(i8* %dest, i8* nocapture %src, %size_t %n) nounwind uwtable { "
+"  tail call void @llvm.memcpy.p0i8.p0i8.${size_t}(i8* %dest, i8* %src, %size_t %n, i32 1, i1 false) "
+"  ret i8* %dest "
+"} ";
+
+def intrinsic [llvm] memset(s:ptr(void), c:int, n:size_t):ptr(void)
+"declare void @llvm.memset.p0i8.${size_t}(%void_ptr nocapture, i8, %size_t, i32, i1) nounwind "
+"define i8* @${mangledName}(%void_ptr %s, %int %c, %size_t %n) nounwind uwtable { "
+"  %1 = trunc %int %c to i8 "
+"  tail call void @llvm.memset.p0i8.${size_t}(%void_ptr %s, i8 %1, %size_t %n, i32 1, i1 false) "
+"  ret %void_ptr %s "
+"}";
+
+def intrinsic [llvm,C] malloc(size:size_t):ptr(void)
+"declare noalias %void_ptr @malloc(%size_t) nounwind";
+
+def intrinsic [llvm,C] strlen(s:ptr(char)):size_t
+"declare %size_t @strlen(%char_ptr nocapture) nounwind readonly";
+
+def intrinsic [llvm,C] free(ptr:ptr(void)):void
+"declare void @free(%void_ptr nocapture) nounwind";
+
+def intrinsic [llvm] to_size_t(val:int):size_t
+"define %size_t @${mangledName}(%int %val) nounwind uwtable readnone {"
+"  $(if $(equal ${int} ${size_t}) $(join \" \" ret %int %val) "
+"    $(join \" \" %conv = sext %int %val to %size_t "
+"      ret %size_t %conv)) "
+"}";
+
+def intrinsic [llvm] to_char_ptr(val:ptr(void)):ptr(char)
+"define %char_ptr @${mangledName}(%void_ptr %val) {"
+"  ret %char_ptr %val"
+"}";
+
+def intrinsic [llvm] addUU(a:size_t, b:size_t):size_t
+"define %size_t @${mangledName}(%size_t %a, %size_t %b) nounwind uwtable readnone {"
+"  %add = add %size_t %b, %a"
+"  ret %size_t %add"
+"}";
+
+def binary + 20 (a:size_t, b:size_t) addUU(a,b);
+
+def binary : 1 (x:void, y:void) y;
+def binary : 1 (x:ptr(void), y:void) y;
+def binary : 1 (x:ptr(void), y:ptr(void)) y;
+
+def id(a:ptr(int)) a;
+def id(a:ref(int)) a;
+
+def testmem(ptr:ptr(void), size:size_t):void
+    var data = "test data 1234" in
+    memset(ptr, 0, size) :
+    memcpy(ptr, data, strlen(data)+to_size_t(1)) :
+    prints(to_char_ptr(ptr)) :
+    prints("\n");
+
+def test():void
+    var mem:ptr(void) = malloc(to_size_t(1024)) in
+    testmem(mem,to_size_t(1024)) : free(mem);
+
+test();

@@ -1,0 +1,35 @@
+namespace * simple
+
+/**
+ * Simple Client/Server Scenario
+ *
+ * This scenario provides an example of a simple data transfer.
+ *
+ */
+
+typedef u64 StreamPosition
+typedef i64 StreamHandle
+
+const StreamHandle INVALID_STREAM = -1;
+const StreamPosition INVALID_POSITION = -1;
+
+struct Data {
+  i32 i,
+  double d
+}
+
+service StreamIO {
+    StreamHandle openStream()
+
+    boolean closeStream(StreamHandle stream)
+
+    boolean write_i32(StreamHandle stream, i32 data)
+
+    boolean write_float(StreamHandle stream, float data)
+
+    boolean write_Data(StreamHandle stream, Data data)
+
+    StreamPosition getStreamPosition(StreamHandle stream)
+
+    boolean setStreamPosition(StreamHandle stream, StreamPosition position)
+}

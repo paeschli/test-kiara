@@ -1,0 +1,36 @@
+# Function to print a double.
+extern [C] printd(x:double):double;
+
+def intrinsic [llvm] binary = 2 (a:ref(double), b:double):double
+"define internal double @${mangledName}(double* nocapture %var, double %value) nounwind uwtable { "
+"  store double %value, double* %var "
+"  ret double %value "
+"}";
+
+def intrinsic [llvm] binary = 2 (a:ref(int), b:int):int
+"define internal %int @${mangledName}(%int* nocapture %var, %int %value) nounwind uwtable { "
+"  store %int %value, %int* %var "
+"  ret %int %value "
+"}";
+
+def intrinsic [llvm] to_double(x:int):double
+"define double @${mangledName}(i32 %a) nounwind uwtable readnone {"
+"entry:"
+"  %conv = sitofp i32 %a to double"
+"  ret double %conv"
+"}"
+;
+
+# Define ':' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary : 1 (x:double, y:double) y;
+def binary : 1 (x:double, y:void) y;
+def binary : 1 (x:void, y:double) y;
+
+
+def test(x:double)
+  printd(x) :
+  x = 4.0 :
+  printd(x);
+
+test(to_double(123));

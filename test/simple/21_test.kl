@@ -1,0 +1,45 @@
+
+def intrinsic [llvm,always_inline] __deref__(v:ptr(int)):ref(int)
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  ret ${rettype} %${argname0} "
+"} ";
+
+def intrinsic [llvm,always_inline] binary = 2 (a:ref(int), b:int):ref(int)
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"  store ${argtype1} %${argname1}, ${argtype0} %${argname0} "
+"  ret ${rettype} %${argname0} "
+"}";
+
+# XXXX
+
+def intrinsic [llvm,always_inline] print(p:ptr(char)):void
+"@prints.str = private unnamed_addr constant [3 x i8] c\"%s\\00\" "
+"declare %int @printf(%char_ptr nocapture, ...) nounwind "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable { "
+"entry:"
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @prints.str, %size_t 0, %size_t 0), ${argtype0} %${argname0}) nounwind "
+"  ret void"
+"}";
+
+# Check this function (move before to_float)
+def newline() print("XY");
+
+struct IntFloat {
+       ad : int;
+};
+
+def intrinsic [llvm] binary . 80 (s:ref(IntFloat), sym:symbol("ad")):ref(int)
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable readnone {"
+"entry:"
+"  %r = getelementptr inbounds ${argtype0} %${argname0}, %size_t 0, i32 0"
+"  ret ${rettype} %r"
+"}";
+
+def test() {
+    var value:IntFloat in {
+      value.ad = 12;
+    };
+    newline();
+};
+
+test();

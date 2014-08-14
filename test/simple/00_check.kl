@@ -1,0 +1,45 @@
+# Function to print a double.
+extern [C] printd(x:double):double;
+
+def intrinsic [llvm] binary = 2 (a:ref(double), b:double):double
+"define internal double @${mangledName}(double* nocapture %var, double %value) nounwind uwtable { "
+"  store double %value, double* %var "
+"  ret double %value "
+"}";
+
+def intrinsic [llvm] binary = 2 (a:ref(int), b:int):int
+"define internal %int @${mangledName}(%int* nocapture %var, %int %value) nounwind uwtable { "
+"  store %int %value, %int* %var "
+"  ret %int %value "
+"}";
+
+def intrinsic [llvm] printdd(a:double):double
+"@.str = private unnamed_addr constant [12 x i8] c\"value = %f\\0A\\00\", align 1 "
+"declare i32 @printf(i8* nocapture, ...) nounwind "
+
+"define double @${mangledName}(double %a) nounwind uwtable { "
+"entry: "
+"  %call = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([12 x i8]* @.str, i64 0, i64 0), double %a) nounwind "
+"  ret double 0.000000e+00 "
+"}"
+;
+
+def intrinsic addii(a:int, b:int):int
+    "define i32 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+    "entry:"
+    "  %add = add nsw i32 %b, %a"
+    "  ret i32 %add"
+    "}";
+
+# Define ',' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary , 1 (x:double, y:double) y;
+def binary , 1 (x:double, y:void) y;
+def binary , 1 (x:void, y:double) y;
+
+def test(x:double)
+  printdd(x) ,
+  x = 4.0 ,
+  printdd(x);
+
+test(123.0);

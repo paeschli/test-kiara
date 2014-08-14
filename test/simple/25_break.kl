@@ -1,0 +1,22 @@
+extern [C] include_file_ctx(ctx:ptr(Context), fileName:ptr(char)):void;
+def include_file(fileName:ptr(char)) include_file_ctx(getContext(), fileName);
+
+include_file("stdlib.kl");
+
+def test() {
+    var value:int in {
+      value = 1;
+      var x:int = block: {
+        value = 2;
+        print(value);
+        print("\n");
+        break(block, 11);
+        22;
+      } in {
+         print(x);
+         print("\n");
+      }
+    }
+}
+
+test();

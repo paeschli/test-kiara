@@ -1,0 +1,39 @@
+# Function to print a double.
+extern [C] printd(x:double):double;
+
+def intrinsic [llvm,C] malloc(size:size_t):ptr(void)
+"declare noalias %void_ptr @${mangledName}(%size_t) nounwind";
+
+def intrinsic [llvm,C] free(ptr:ptr(void)):void
+"declare void @${mangledName}(%void_ptr nocapture) nounwind";
+
+def intrinsic [llvm] to_size_t(val:int):size_t
+"define %size_t @${mangledName}(%int %val) nounwind uwtable readnone {"
+"  $(if $(equal ${int} ${size_t}) $(join \" \" ret %int %val) "
+"    $(join \" \" %conv = sext %int %val to %size_t "
+"      ret %size_t %conv)) "
+"}";
+
+
+def intrinsic [llvm] testmem(ptr:ptr(void), size:size_t):void
+"@testmem.data = internal unnamed_addr constant [15 x i8] c\"test data 1234\\00\", align 1 "
+"declare void @llvm.memset.p0i8.${size_t}(%void_ptr nocapture, i8, %size_t, i32, i1) nounwind "
+"declare void @llvm.memcpy.p0i8.p0i8.${size_t}(%void_ptr nocapture, i8* nocapture, %size_t, i32, i1) nounwind "
+"declare i32 @puts(i8* nocapture) nounwind "
+"define void @${mangledName}(%void_ptr %ptr, %size_t %size) nounwind uwtable { "
+"  tail call void @llvm.memset.p0i8.${size_t}(i8* %ptr, i8 0, %size_t %size, i32 1, i1 false) "
+"  tail call void @llvm.memcpy.p0i8.p0i8.${size_t}(i8* %ptr, i8* getelementptr inbounds ([15 x i8]* @testmem.data, i64 0, i64 0), %size_t 15, i32 1, i1 false) "
+"  %puts = tail call i32 @puts(i8* %ptr) "
+"  ret void "
+"}";
+
+def binary : 1 (x:void, y:void) y;
+
+def id(a:ptr(int)) a;
+def id(a:ref(int)) a;
+
+def test():void
+    var mem:ptr(void) = malloc(to_size_t(1024)) in
+    testmem(mem,to_size_t(1024)) : free(mem);
+
+test();

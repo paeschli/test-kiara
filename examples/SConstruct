@@ -1,0 +1,9 @@
+env = Environment()
+
+env.Append(CPPPATH="#/../include")
+env.Append(LIBPATH="#/../lib")
+env.AppendENVPath('LD_LIBRARY_PATH', "#/../lib")
+env.AppendENVPath('PATH', "#/../lib")
+
+env.Program("structtest", "structtest.c", LIBS=["KIARA"])
+env.Program("structtest_server", "structtest_server.c", LIBS=["KIARA"])

@@ -1,0 +1,52 @@
+import os
+
+env = Environment()
+
+platform = env['PLATFORM']
+isWin32 = (platform == 'win32')
+
+if isWin32:
+    win32toolsDir = os.path.join(env.Dir('#').abspath, 'win32tools')
+    if os.path.exists(win32toolsDir):
+        env.PrependENVPath('PATH', os.path.join(win32toolsDir, 'bin'))
+
+lemon_tool = env.Program('lemon', 'lemon.c')
+
+env.Command(['kiaray.cpp', 'kiaray_tokens.hpp', 'kiaray.out'], 
+            ['kiaray.yy', lemon_tool[0]],
+            lemon_tool[0].abspath + ' H=${TARGETS[1]} O=$TARGET $SOURCE')
+env.Command('kiaral.cpp', 'kiaral.ll',
+            'flex -o $TARGET $SOURCE')
+
+env.Append(LIBPATH = '.')
+
+platform = env['PLATFORM']
+isWin32 = (platform == 'win32')
+
+if isWin32:
+    env.Append(CCFLAGS = env.Split('/EHsc'))
+else:
+    env.Append(CCFLAGS = env.Split('-g -O0 -Wall'))
+
+sources = []
+sources.extend(env.Glob("*.cpp"))
+sources.extend(env.Glob("*.c"))
+
+exclude = ['parsertest.cpp', 'lexertest.cpp',
+           'lempar.c', 'kiaraparser.cpp', 'lemon.c']
+def excluded(f):
+    for i in exclude:
+        if i in f:
+            return True
+    return False
+
+sources = [f for f in sources if not excluded(str(f))]
+
+env.Library('KIARAParser', sources)
+env.Program('parsertest', 'parsertest.cpp', LIBS=['KIARAParser'])
+
+# Local Variables:
+# tab-width:4
+# indent-tabs-mode:nil
+# End:
+# vim: set expandtab tabstop=4 shiftwidth=4:

@@ -1,0 +1,233 @@
+struct Context;
+
+extern [C] load_module_ctx(ctx:ptr(Context), fileName:ptr(char)):void;
+def load_module(fileName:ptr(char)) load_module_ctx(getContext(), fileName);
+
+extern [C] write_module_ctx(ctx:ptr(Context), fileName:ptr(char)):void;
+def write_module(fileName:ptr(char)) write_module_ctx(getContext(), fileName);
+
+def intrinsic [builtin] sizeof(a:any):size_t "sizeof";
+
+def intrinsic [llvm,always_inline] __deref__(v:ptr(char)):ref(char)
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  ret ${rettype} %${argname0} "
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ptr(ptr(char))):ref(ptr(char))
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  ret ${rettype} %${argname0} "
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ptr(int)):ref(int)
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  ret ${rettype} %${argname0} "
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ref(int)):int
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  %r = load ${argtype0} %${argname0} "
+"  ret ${rettype} %r"
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ptr(float)):ref(float)
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  ret ${rettype} %${argname0} "
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ref(float)):float
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  %r = load ${argtype0} %${argname0} "
+"  ret ${rettype} %r"
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ptr(double)):ref(double)
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  ret ${rettype} %${argname0} "
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ref(double)):double
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  %r = load ${argtype0} %${argname0} "
+"  ret ${rettype} %r"
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ref(ptr(char))):ptr(char)
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  %r = load ${argtype0} %${argname0} "
+"  ret ${rettype} %r"
+"} ";
+
+def intrinsic [llvm,always_inline] __deref__(v:ref(ptr(double))):ptr(double)
+"define internal ${rettype} @${mangledName}(${argtype0} nocapture %${argname0}) nounwind uwtable readonly { "
+"  %r = load ${argtype0} %${argname0} "
+"  ret ${rettype} %r"
+"} ";
+
+
+def intrinsic [llvm,always_inline] __addressof__(v:ref(ptr(char))):ptr(ptr(char))
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret  ${rettype} %${argname0} "
+"}";
+
+# C's dereference and addressof
+def unary * (x:ptr(double)):ref(double) __deref__(x);
+
+def unary * (x:ptr(ptr(char))):ref(ptr(char)) __deref__(x);
+
+def unary & (x:ref(ptr(char))):ptr(ptr(char)) __addressof__(x);
+
+def intrinsic [llvm,C,always_inline] malloc(size:size_t):ptr(void)
+"declare noalias ${rettype} @${mangledName}(${argtype0}) nounwind";
+
+def intrinsic [llvm,C,always_inline] free(ptr:ptr(void)):void
+"declare void @${mangledName}(${argtype0} nocapture) nounwind";
+
+def intrinsic [llvm,C,always_inline] strlen(s:ptr(char)):size_t
+"declare ${rettype} @${mangledName}(${argtype0} nocapture) nounwind readonly";
+
+def intrinsic [llvm,C,always_inline] strcpy(dest:ptr(char), src:ptr(char)):ptr(char)
+"declare ${rettype} @${mangledName}(${argtype0}, ${argtype1} nocapture) nounwind";
+
+def intrinsic [llvm,always_inline] to_int_ptr(val:ptr(void)):ptr(int)
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"  %r = bitcast ${argtype0} %${argname0} to ${rettype} "
+"  ret ${rettype} %r "
+"} ";
+
+def intrinsic [llvm,always_inline] to_char_ptr(val:ptr(void)):ptr(char)
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"  %r = bitcast ${argtype0} %${argname0} to ${rettype} "
+"  ret ${rettype} %r "
+"} ";
+
+def intrinsic [llvm,always_inline] to_double_ptr(val:ptr(void)):ptr(double)
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"  %r = bitcast ${argtype0} %${argname0} to ${rettype} "
+"  ret ${rettype} %r "
+"} ";
+
+
+def intrinsic [llvm,always_inline] to_size_t(val:int):size_t
+"define %size_t @${mangledName}(%int %val) nounwind uwtable readnone {"
+"  $(if $(equal ${int} ${size_t}) $(join \" \" ret %int %val) "
+"    $(join \" \" %conv = sext %int %val to %size_t "
+"      ret %size_t %conv)) "
+"}";
+
+
+def intrinsic [llvm,always_inline] binary = 2 (a:ref(int), b:int):ref(int)
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"  store ${argtype1} %${argname1}, ${argtype0} %${argname0} "
+"  ret ${rettype} %${argname0} "
+"}";
+
+def intrinsic [llvm,always_inline] binary = 2 (a:ref(float), b:float):ref(float)
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"  store ${argtype1} %${argname1}, ${argtype0} %${argname0} "
+"  ret ${rettype} %${argname0} "
+"}";
+
+def intrinsic [llvm,always_inline] binary = 2 (a:ref(double), b:double):ref(double)
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"  store ${argtype1} %${argname1}, ${argtype0} %${argname0} "
+"  ret ${rettype} %${argname0} "
+"}";
+
+
+def intrinsic [llvm,always_inline] binary = 2 (a:ref(ptr(char)), b:ptr(char)):ref(ptr(char))
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"  store ${argtype1} %${argname1}, ${argtype0} %${argname0} "
+"  ret ${rettype} %${argname0} "
+"}";
+
+def intrinsic [llvm,always_inline] binary = 2 (a:ref(ptr(double)), b:ptr(double)):ref(ptr(double))
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"  store ${argtype1} %${argname1}, ${argtype0} %${argname0} "
+"  ret ${rettype} %${argname0} "
+"}";
+
+def intrinsic [llvm,always_inline] binary != 10 (a:int, b:int):boolean
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"entry: "
+"  %cmp = icmp ne ${argtype0} %${argname0}, %${argname1}"
+"  ret ${rettype} %cmp"
+"}";
+
+def intrinsic [llvm,always_inline] binary == 10 (a:int, b:int):boolean
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable { "
+"entry: "
+"  %cmp = icmp eq ${argtype0} %${argname0}, %${argname1}"
+"  ret ${rettype} %cmp"
+"}";
+
+def intrinsic [llvm,always_inline] binary + 20 (a:size_t, b:size_t):size_t
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable readnone {"
+"  %add = add ${argtype1} %${argname1}, %${argname0}"
+"  ret ${rettype} %add"
+"}";
+
+def intrinsic [llvm,always_inline] binary - 20 (a:size_t, b:size_t):size_t
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable readnone {"
+"  %sub = sub ${argtype0} %${argname0}, %${argname1}"
+"  ret ${rettype} %sub"
+"}";
+
+def intrinsic [llvm,always_inline] print(a:int):void
+"@printi.str = private unnamed_addr constant [3 x i8] c\"%i\\00\" "
+"declare %int @printf(%char_ptr nocapture, ...) nounwind "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable {"
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @printi.str,  %size_t 0,  %size_t 0), ${argtype0} %${argname0}) nounwind"
+"  ret void"
+"}";
+
+def intrinsic [llvm,always_inline] print(a:double):void
+"@printd.str = private unnamed_addr constant [3 x i8] c\"%f\\00\" "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable {"
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @printd.str,  %size_t 0,  %size_t 0), ${argtype0} %${argname0})"
+"  ret void"
+"}";
+
+def intrinsic [llvm,always_inline] print(a:float):void
+"@printf.str = private unnamed_addr constant [3 x i8] c\"%f\\00\" "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable { "
+"entry: "
+"  %conv = fpext ${argtype0} %${argname0} to double "
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @printf.str,  %size_t 0,  %size_t 0), double %conv)"
+"  ret void"
+"}";
+
+def intrinsic [llvm,always_inline] print(p:ptr(void)):void
+"@printp.str = private unnamed_addr constant [3 x i8] c\"%p\\00\" "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable { "
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @printp.str, %size_t 0, %size_t 0), ${argtype0} %${argname0}) nounwind "
+"  ret void "
+"}";
+
+def intrinsic [llvm,always_inline] print(p:ptr(char)):void
+"@prints.str = private unnamed_addr constant [3 x i8] c\"%s\\00\" "
+"define internal void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable { "
+"entry:"
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([3 x i8]* @prints.str, %size_t 0, %size_t 0), ${argtype0} %${argname0}) nounwind "
+"  ret void"
+"}";
+
+def intrinsic [llvm,always_inline] print(a:size_t):void
+"@printsz.str = private unnamed_addr constant [4 x i8] "
+" $(if $(equal $(getsysname) windows) "
+"  \"c\\\"%Iu\\\\00\\\"\" "
+"  \"c\\\"%zu\\\\00\\\"\") "
+"define void @${mangledName}(${argtype0} %${argname0}) nounwind uwtable {"
+"  %call = tail call %int (%char_ptr, ...)* @printf(%char_ptr getelementptr inbounds ([4 x i8]* @printsz.str,  %size_t 0,  %size_t 0), %size_t %${argname0}) nounwind"
+"  ret void"
+"}";
+
+# Check this function (move before to_float)
+def newline() print("\n");
+
+def intrinsic [llvm,always_inline] to_float(d:double):float
+"define internal ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  %conv = fptrunc ${argtype0} %${argname0} to ${rettype} "
+"  ret ${rettype} %conv "
+"}";

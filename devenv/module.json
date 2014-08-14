@@ -1,0 +1,33 @@
+{
+  "kiara" : {
+      "description" : "KIARA Library",
+      "default" : false,
+      "type" : "library",
+      "dependsOn" : ["boost", "dfc", "openssl", "curl"],
+      "optionallyDependsOn" : ["llvm3"],
+      "repository" : {
+          "type" : "git",
+          "url" : "https://git.cg.uni-saarland.de/projects/kiara.git"
+      },
+      "builder" : "SCons",
+      "variables@activate" : {
+          "boost.build_libraries+unique" : [
+              "--with-thread", "--with-regex", "--with-test",
+              "--with-filesystem", "--with-system", "--with-date_time",
+              "--with-serialization"
+          ]
+      },
+      "shell@setup_own_env" : {
+          "append" : [
+              "KIARA_MODULE_PATH=\"\"",
+              "appendPathIfNo KIARA_MODULE_PATH \"$_BUILD_DIR/lib\"",
+              "export KIARA_MODULE_PATH"
+          ]
+      },
+      "shell" : {
+          "append" : [
+              "source \"$(dirname \"$DEVENV_THIS_MODULE_FILE\")\"/tools.sh"
+          ]
+      }
+  }
+}

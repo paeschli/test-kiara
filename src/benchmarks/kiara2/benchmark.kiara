@@ -1,0 +1,5 @@
+namespace * benchmark
+
+service benchmark {
+  i32 sendInt(i32 value);
+}

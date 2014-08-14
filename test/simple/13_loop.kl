@@ -1,0 +1,24 @@
+extern [C] putchard(c:double):double;
+
+def intrinsic [llvm] prints(str:ptr(char)):void
+"@prints.str = private unnamed_addr constant [3 x i8] c\"%s\\00\" "
+"declare i32 @printf(i8* nocapture, ...) nounwind "
+"define void @${mangledName}(i8* %str) nounwind uwtable { "
+"  %call = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @prints.str, i64 0, i64 0), i8* %str) nounwind "
+"  ret void "
+"}";
+
+def intrinsic [llvm] binary < 10 (a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %cmp = fcmp olt double %a, %b"
+"  %conv = zext i1 %cmp to i32"
+"  %conv1 = sitofp i32 %conv to double"
+"  ret double %conv1"
+"}";
+
+def printstar(n:double)
+  for i = 1.0, i < n, 1.0 in
+    putchard(42.0);
+
+printstar(5.0);
+prints("\n");

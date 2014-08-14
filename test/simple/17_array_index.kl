@@ -1,0 +1,185 @@
+# Function to print a double.
+extern printd(x:double):double;
+
+def intrinsic [llvm] binary = 2 (a:ref(double), b:double):double
+"define internal double @${mangledName}(double* nocapture %var, double %value) nounwind uwtable { "
+"  store double %value, double* %var "
+"  ret double %value "
+"}";
+
+def intrinsic [llvm] binary = 2 (a:ref(int), b:int):int
+"define internal %int @${mangledName}(%int* nocapture %var, %int %value) nounwind uwtable { "
+"  store %int %value, %int* %var "
+"  ret %int %value "
+"}";
+
+def intrinsic [llvm] binary < 10 (a:int, b:int):boolean
+"define internal zeroext i1 @${mangledName}(i32 %a, i32 %b) nounwind uwtable readnone {"
+"  %cmp = icmp slt i32 %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def intrinsic [llvm] __deref__(v:ptr(int)):int
+"define internal %int @${mangledName}(%int* nocapture %v) nounwind uwtable readonly { "
+"  %r = load %int* %v "
+"  ret %int %r"
+"} ";
+
+def intrinsic [llvm] __deref__(v:ref(int)):int
+"define internal %int @${mangledName}(%int* nocapture %v) nounwind uwtable readonly { "
+"  %r = load %int* %v "
+"  ret %int %r"
+"} ";
+
+def intrinsic [builtin] sizeof(a:any):size_t "sizeof";
+
+def intrinsic [llvm] printi(a:int):void
+"@printi.str = private unnamed_addr constant [4 x i8] c\"%i\\0A\\00\", align 1"
+"declare %int @printf(i8* nocapture, ...) nounwind "
+"define internal void @${mangledName}(i32 %a) nounwind uwtable {"
+"  %call = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @printi.str, i64 0, i64 0), i32 %a) nounwind"
+"  ret void"
+"}";
+
+def intrinsic [llvm] prints(str:ptr(char)):void
+"@prints.str = private unnamed_addr constant [3 x i8] c\"%s\\00\" "
+"define internal void @${mangledName}(i8* %str) nounwind uwtable { "
+"  %call = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @prints.str, i64 0, i64 0), i8* %str) nounwind "
+"  ret void "
+"}";
+
+def intrinsic [llvm,C] memcpy(dest:ptr(void), src:ptr(void), n:size_t):ptr(void)
+"declare void @llvm.memcpy.p0i8.p0i8.${size_t}(i8* nocapture, i8* nocapture, %size_t, i32, i1) nounwind "
+"define i8* @${mangledName}(i8* %dest, i8* nocapture %src, %size_t %n) nounwind uwtable { "
+"  tail call void @llvm.memcpy.p0i8.p0i8.${size_t}(i8* %dest, i8* %src, %size_t %n, i32 1, i1 false) "
+"  ret i8* %dest "
+"} ";
+
+def intrinsic [llvm,C] memset(s:ptr(void), c:int, n:size_t):ptr(void)
+"declare void @llvm.memset.p0i8.${size_t}(%void_ptr nocapture, i8, %size_t, i32, i1) nounwind "
+"define i8* @${mangledName}(%void_ptr %s, %int %c, %size_t %n) nounwind uwtable { "
+"  %1 = trunc %int %c to i8 "
+"  tail call void @llvm.memset.p0i8.${size_t}(%void_ptr %s, i8 %1, %size_t %n, i32 1, i1 false) "
+"  ret %void_ptr %s "
+"}";
+
+def intrinsic [llvm,C] malloc(size:size_t):ptr(void)
+"declare noalias %void_ptr @malloc(%size_t) nounwind";
+
+def intrinsic [llvm,C] strlen(s:ptr(char)):size_t
+"declare %size_t @strlen(%char_ptr nocapture) nounwind readonly";
+
+def intrinsic [llvm,C] free(ptr:ptr(void)):void
+"declare void @free(%void_ptr nocapture) nounwind";
+
+def intrinsic [llvm] to_size_t(val:int):size_t
+"define internal %size_t @${mangledName}(%int %val) nounwind uwtable readnone {"
+"  $(if $(equal ${int} ${size_t}) $(join \" \" ret %int %val) "
+"    $(join \" \" %conv = sext %int %val to %size_t "
+"      ret %size_t %conv)) "
+"}";
+
+def intrinsic [llvm] to_int_ptr(val:ptr(void)):ptr(int)
+"define internal %int* @${mangledName}(%void_ptr %p) nounwind uwtable readnone { "
+"  %r = bitcast %void_ptr %p to i32* "
+"  ret %int* %r "
+"} ";
+
+def intrinsic [llvm] to_int_array(val:ptr(void)):array(int)
+"define internal %int* @${mangledName}(%void_ptr %p) nounwind uwtable readnone { "
+"  %r = bitcast %void_ptr %p to %int* "
+"  ret %int* %r "
+"} ";
+
+def intrinsic [llvm] to_void_ptr(val:array(int)):ptr(void)
+"define internal %void_ptr @${mangledName}(%int* %p) nounwind uwtable readnone { "
+"  %r = bitcast %int* %p to %void_ptr "
+"  ret  %void_ptr %r "
+"} ";
+
+def intrinsic [llvm] to_char_ptr(val:ptr(void)):ptr(char)
+"define internal %char_ptr @${mangledName}(%void_ptr %val) {"
+"  ret %char_ptr %val"
+"}";
+
+def intrinsic [llvm] binary - 20 (a:int, b:int):int
+"define internal %int @${mangledName}(%int %a, %int %b) nounwind uwtable readnone { "
+"  %sub = sub nsw %int %a, %b "
+"  ret %int %sub "
+"}";
+
+def intrinsic [llvm] ataiU(a:array(int), index:size_t):ptr(int)
+"define internal %int* @${mangledName}(%int* nocapture %p, %size_t %index) nounwind uwtable readonly { "
+"  %arrayidx = getelementptr inbounds %int* %p, %size_t %index "
+"  ret %int* %arrayidx "
+"}";
+
+def intrinsic [llvm] ataii(a:array(int), index:int):ptr(int)
+"define internal %int* @${mangledName}(%int* nocapture %p, %int %index) nounwind uwtable readonly { "
+"  %arrayidx = getelementptr inbounds %int* %p, %int %index "
+"  ret %int* %arrayidx "
+"}";
+
+
+def intrinsic [llvm] __index__(a:ptr(int), index:size_t):ref(int)
+"define internal %int* @${mangledName}(%int* nocapture %p, %size_t %index) nounwind uwtable readonly { "
+"  %arrayidx = getelementptr inbounds %int* %p, %size_t %index "
+"  ret %int* %arrayidx "
+"}";
+
+def intrinsic [llvm] __index__(a:ptr(int), index:int):ref(int)
+"define internal %int* @${mangledName}(%int* nocapture %p, %int %index) nounwind uwtable readonly { "
+"  %arrayidx = getelementptr inbounds %int* %p, %int %index "
+"  ret %int* %arrayidx "
+"}";
+
+def intrinsic [llvm] binary + 20 (a:size_t, b:size_t):size_t
+"define internal %size_t @${mangledName}(%size_t %a, %size_t %b) nounwind uwtable readnone {"
+"  %add = add %size_t %b, %a"
+"  ret %size_t %add"
+"}";
+
+def intrinsic [llvm] binary - 20 (a:size_t, b:size_t):size_t
+"define internal %size_t @${mangledName}(%size_t %a, %size_t %b) nounwind uwtable readnone {"
+"  %sub = sub %size_t %a, %b"
+"  ret %size_t %sub"
+"}";
+
+def [internal] binary : 1 (x:void, y:void) y;
+def [internal] binary : 1 (x:ptr(void), y:void) y;
+def [internal] binary : 1 (x:ptr(void), y:ptr(void)) y;
+def [internal] binary : 1 (x:int, y:void) y;
+
+def [internal] id(a:ptr(int)) a;
+def [internal] id(a:ref(int)) a;
+
+def intrinsic [llvm] binary * 40 (a:int, b:int):int
+"define internal %int @${mangledName}(%int %a, %int %b) nounwind uwtable readnone {"
+"  %mul = mul nsw %int %b, %a"
+"  ret %int %mul"
+"}";
+
+def intrinsic [llvm] binary * 40 (a:size_t, b:size_t):size_t
+"define internal %size_t @${mangledName}(%size_t %a, %size_t %b) nounwind uwtable readnone {"
+"  %mul = mul %size_t %b, %a"
+"  ret %size_t %mul"
+"}";
+
+def testIntArray(len:int):void
+    var data:array(int) = to_int_array(malloc(sizeof(len)*to_size_t(len))) in
+    (for i:int = 0, i < len-1, 1 in data[i] = i) :
+    (for i:int = 0, i < len-1, 1 in printi(data[i])) :
+    free(to_void_ptr(data));
+
+def testmem(ptr:ptr(void), size:size_t):void
+    var data = "test data 1234" in
+    memset(ptr, 0, size) :
+    memcpy(ptr, data, strlen(data)+to_size_t(1)) :
+    prints(to_char_ptr(ptr)) :
+    prints("\n");
+
+def test():void
+    var mem:ptr(void) = malloc(to_size_t(1024)) in
+    testmem(mem,to_size_t(1024)) : free(mem);
+
+testIntArray(12);

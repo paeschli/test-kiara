@@ -1,0 +1,40 @@
+# Function to print a double.
+extern [C] printd(x:double):double;
+
+def intrinsic [llvm] subdd(a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %sub = fsub double %a, %b"
+"  ret double %sub"
+"}";
+
+def intrinsic [llvm] muldd(a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %mul = fmul double %a, %b"
+"  ret double %mul"
+"}";
+
+def intrinsic [llvm] divdd(a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %div = fdiv double %a, %b"
+"  ret double %div"
+"}";
+
+def intrinsic [llvm] binary + 20 (a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %add = fadd double %a, %b"
+"  ret double %add"
+"}";
+
+
+def binary - 20 (a:double, b:double) subdd(a,b);
+def binary * 40 (a:double, b:double) muldd(a,b);
+def binary / 40 (a:double, b:double) divdd(a,b);
+
+# Define ':' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary : 1 (x:double, y:double) y;
+
+def test(x:double) printd(x);
+
+test(123.0+2.0);
+test(123.0/2.0);

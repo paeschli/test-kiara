@@ -1,0 +1,7 @@
+Connecting with http://localhost:8080/service
+Generating stubs...
+Done
+Enter user name: Enter password: Enter ":q" for exiting
+daada: From: echo (id=2) Message: uia
+daada: From: echo (id=2) Message: duia
+daada: Exiting.

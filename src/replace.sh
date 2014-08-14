@@ -1,0 +1,2 @@
+perl -e 'foreach  (<>) {  =~ s/(tok_[a-z_]*)/uc()/eg; print ; }' kiaral.ll > kiaral2.ll
+perl -e 'foreach $line (<>) { if ($line =~ /was not declared in this scope/ && $line =~ /TOK/) { $line =~ s/.*(TOK_[A-Z0-9_]*).*/$1/eg; print $line; }; }' check.txt > tokens.txt

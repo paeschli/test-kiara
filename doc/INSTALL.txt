@@ -1,0 +1,217 @@
+KIARA Installation Instructions
+===============================
+
+The installation instructions below explain how to build KIARA with Devenv
+development environment.
+
+1. Build environment
+====================
+
+KIARA was tested on Ubuntu Linux 12.04 64/32-bit as well as
+on Windows 7 64-bit as 32- and 64-bit application.
+
+1.1 Ubuntu Linux
+----------------
+
+Install following Ubuntu packages:
+
+sudo apt-get install git build-essential flex g++-multilib libtbb-dev libcurl4-openssl-dev
+
+For testing use of the valgrind tool is recommended:
+
+sudo apt-get install valgrind
+
+When you build 32-bit application on 64-bit Ubuntu install additionally
+following packages:
+
+sudo apt-get install libc6-dev-i386 ia32-libs libc6-dbg:i386
+
+1.2 Fedora Linux 19 Security Spin
+---------------------------------
+
+Install following Fedora packages:
+
+sudo yum install git gcc gcc-c++ make flex tbb-devel openssl-devel openssl-libs libcurl-devel cmake perl-podlators python-pexpect
+
+For testing use of the valgrind tool is recommended:
+
+sudo yum install valgrind
+
+When you build 32-bit application on 64-bit Fedora install additionally
+following packages:
+
+sudo yum install glibc-devel.i686 libstdc++.i686 openssl-devel.i686 openssl-libs.i686 libcurl-devel.i686
+
+1.3 Windows 7
+-------------
+
+Install latest msysgit : http://git-scm.com/download/win
+Install latest python 2.x : http://www.python.org/download/
+Install pywin32 : http://sourceforge.net/projects/pywin32/
+
+2. Building KIARA
+=================
+
+2.1 Build KIARA on Linux
+------------------------
+
+mkdir MyProjectDir
+cd MyProjectDir
+git clone gitor@dornbirn.zhaw.ch:kiara/devenv.git
+./devenv/setup_devenv -a --x-module-package=gitor@dornbirn.zhaw.ch:kiara/kiara-devenv-modules.git
+source devenv.sh
+de configure_modules kiara llvm3 nodejs
+de set_var boost.version 1.50.0
+de update
+de build -j
+
+# Install kiara.js server
+# Note: node and npm should be in path,
+#       they should be automatically installed in previous step
+
+git clone https://github.com/dmrub/kiara.js.git
+cd kiara.js
+npm install
+
+Note: building process of dfc and kiara modules will automatically clone
+shared build system from ZHAW repositories. It will be placed in builder
+subdirectory.
+
+2.2 Build KIARA on Windows 7
+----------------------------
+
+Run Git Bash (there should be a shortcut on a Desktop).
+
+Run commands from step 2. of the Linux installation
+
+Note: devenv building process on Windows will download a contrib archive from
+CGUdS server. It contains binaries and libraries that are missing by default
+on Windows (e.g. TBB library).
+
+* Running server and client
+
+When you successfully built everything you should be able to execute KIARA
+server:
+
+# Run server in the background
+
+kiara_calctest_server &
+
+Wait until "Starting server..." message is output.
+Run KIARA testing client (kiara/src/tests/calctest.c):
+
+# Run client
+
+kiara_calctest
+
+Client should output following lines:
+
+calc.add: result = 53
+calc.addf: result = 53.000000
+calc.stringToInt32: result = -125
+calc.int32ToString: result = -42
+calc.stringToInt32: result = 521
+calc.int32ToString: result = 142
+
+2.3 Customizing build configuration
+-----------------------------------
+
+After you built first time and exited bash shell you can reactivate your
+environment by sourcing devenv.sh script in the project directory
+(MyProjectDir). On Windows you can also start devenv.bat in the Explorer.
+
+In the active devenv environment you can run all programs, reconfigure build
+parameters and rebuild. All available commands are documented in the online
+help, just run "de help".
+
+Rebuild everything:
+
+de build -j
+
+Rebuild only kiara module:
+
+de build kiara -j
+
+Change boost version:
+
+de set_var boost.version 1.52.0
+
+Configure Visual Studio version and target architecture:
+
+# Depending on which Visual Studio version you want to use type:
+
+de set_var ALLMODULES.msvc_versions 9.0
+
+# or
+
+de set_var ALLMODULES.msvc_versions 10.0
+
+# Depending on what target architecture (32/64-bit) you want to build for type:
+
+de set_var ALLMODULES.target_arch x86
+
+# or
+
+de set_var ALLMODULES.target_arch x86_64
+
+# Finally
+
+de build -j
+
+# Generating Visual Studio Project:
+
+devenvMakeSBEngineVSProject kiara
+
+# Resulting solution and project are then in kiara/kiara.sln and
+# kiara/kiara.vcxproj
+
+Switch a branch and update:
+
+With git only:
+cd kiara; git checkout mybranch; git pull --rebase
+
+With devenv:
+de set_var kiara.git_branch mybranch
+de update kiara --pull
+
+* Where are built libraries and binaries ?
+
+Devenv environment downloads and builds third-party libraries like boost in
+the resources subdirectory of your project directory.
+User modules (like dfc and kiara) are built in the install subdirectory of
+your project directory.
+
+In the install directory are multiple build-<configuration> subdirectories,
+one per single configuration of a selected compiler, optimization mode and
+target architecture. You can select mode by changing module variables
+<module_name>.compiler, <module_name>.optimization, <module_name>.target_arch,
+e.g.
+
+de set_var kiara.optimization debug
+# Press TAB to get variable autocompletion, and available values
+
+Each build-<configuration> subdirectory contains again one subdirectory per
+project, which finally contains all binaries.
+
+2.4 Reporting problems
+----------------------
+
+When you report problems please be precise as possible describing what
+happened. We need to know your operational system, and output of set command
+would help as well.
+
+When you get error messages when building KIARA or DFC libraries please attach
+to your report following files:
+
+install/build-<compiler>-<opt-mode>-<target-arch>/kiara/config.log
+install/build-<compiler>-<opt-mode>-<target-arch>/dfc/config.log
+
+compiler ::= gcc | msvc
+opt-mode ::= opt | debug
+target-arch ::= x86 | x86_64
+
+2.5 Building SDK
+----------------
+
+In order to build SDK run make_kiara_sdk command in activated devenv environment.
+It will delete existing SDK directory and create a new one.

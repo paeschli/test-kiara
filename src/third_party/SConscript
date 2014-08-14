@@ -1,0 +1,1153 @@
+# -*-Python-*-
+
+import os
+import subprocess
+from builder.bconfig import getArchInfo, ARCH_X86_64
+
+Import('env')
+
+third_party_libs = {}
+
+platform = env['PLATFORM']
+compiler = env['compiler']
+isWin32 = (platform == 'win32')
+archInfo = getArchInfo(env)
+isX64 = archInfo.getArchID() == ARCH_X86_64
+isGCC = (compiler == 'GCC')
+
+HAVE_LLVM = bool(env.get('HAVE_LLVM', False))
+HAVE_LLVMTOOLS = bool(env.get('HAVE_LLVMTOOLS', False))
+
+this_dir = env.Dir('.').srcnode().abspath
+
+class LibConfig:
+    def __init__(self, dir=None, url=None, pkg_name=None, path=None, branch=None):
+        self.dir = dir
+        self.url = url
+        self.pkg_name = pkg_name
+        self.path = path
+        self.build_pkg = False
+        self.branch = branch
+
+    def clone(self):
+        self.build_pkg = False
+        if not os.path.exists(self.dir):
+            if self.branch is not None:
+                params = ["git", "clone", "-n", self.url, self.path]
+            else:
+                params = ["git", "clone", self.url, self.path]
+            status = subprocess.call(params, cwd=this_dir)
+            if status == 0 and self.branch is not None:
+                status = subprocess.call(["git", "checkout", self.branch], cwd=self.dir)
+            if status == 0:
+                print 'Successfully cloned %s from "%s" (branch: %s)' % (self.pkg_name, self.url, self.branch or "master")
+                self.build_pkg = True
+            else:
+                print 'Could not clone %s from "%s" (branch %s)' % (self.pkg_name, self.url, self.branch or "master")
+                self.build_pkg = False
+        else:
+            self.build_pkg = True
+        return self.build_pkg
+
+def exclude(sources, excludes):
+    result = []
+    for file in sources:
+        doExcludeFile = False
+        for e in excludes:
+            if e in str(file):
+                doExcludeFile = True
+                break
+        if not doExcludeFile:
+            result.append(file)
+    return result
+
+def CheckStruct(ctx, name, includes):
+    ctx.Message('Checking for C struct '+name)
+    ret = ctx.TryLink(includes+'''
+int main() {
+  struct %s;
+  return 0;
+}
+''' % name, extension='.c')
+
+    ctx.Result(ret)
+    return ret
+
+def RunSource(ctx, name, source, extension):
+    ctx.Message('Checking for '+name+' ...')
+    (ret, outputStr) = ctx.TryRun(source, extension=extension)
+    ctx.Result(ret)
+    return ret
+
+def CompileSource(ctx, name, source, extension):
+    ctx.Message('Checking for '+name+' ...')
+    ret = ctx.TryCompile(source, extension=extension)
+    ctx.Result(ret)
+    return ret
+
+# Compile uriparser
+
+uriparser = LibConfig(dir = env.Dir('uriparser').srcnode().abspath,
+                    url = "git://uriparser.git.sourceforge.net/gitroot/uriparser/uriparser",
+                    pkg_name = "uriparser",
+                    path = "uriparser")
+
+build_pkg = uriparser.clone()
+
+if build_pkg:
+    ccflags = env.Split('$CCFLAGS')
+    if isGCC:
+        ccflags.append('-Wno-unused-function')
+
+    cpppath = [env.Dir(uriparser.path+'/include').path, env.Dir(uriparser.path+'/src').path]
+
+    if True:
+        # Native
+        objects = []
+        for f in env.Glob(uriparser.path+'/src/*.c'):
+            obj = env.Object(f, CPPPATH=cpppath, CCFLAGS=ccflags)
+            objects.extend(obj)
+        uriparser_static = env.Library('uriparser', objects)
+
+        env.DeclarePackage("uriparser_static",
+                           LIBS=[uriparser_static[:]],
+                           CPPPATH=cpppath,
+                           dependencies=[],
+                           trigger_libs=["uriparser_static"],
+                           trigger_frameworks=["uriparser_static"])
+
+        # uriparse cannot be compiled on Windows
+        if not isWin32:
+            prog_obj = env.Object(uriparser.path+'/tool/uriparse.c', CPPPATH=cpppath, CCFLAGS=ccflags)
+
+            prog = env.Program('uriparse',
+                               prog_obj,
+                               LIBS=['uriparser'],
+                               CPPPATH=cpppath,
+                               CCFLAGS=ccflags)
+
+# Compile http-parser
+
+http_parser = LibConfig(dir = env.Dir('http-parser').srcnode().abspath,
+                    url = "https://github.com/joyent/http-parser.git",
+                    pkg_name = "http-parser",
+                    path = "http-parser")
+
+build_pkg = http_parser.clone()
+
+if build_pkg:
+    ccflags = env.Split('$CCFLAGS')
+    if isGCC:
+        ccflags.append('-Wno-unused-function')
+
+    cpppath = [env.Dir(http_parser.path).path]
+
+    if True:
+        # Native
+        objects = []
+        for f in [http_parser.path+'/http_parser.c']:
+            obj = env.Object(f, CPPPATH=cpppath, CCFLAGS=ccflags)
+            objects.extend(obj)
+        http_parser_static = env.Library('http_parser', objects)
+
+        env.DeclarePackage("http_parser_static",
+                           LIBS=[http_parser_static[:]],
+                           CPPPATH=cpppath,
+                           dependencies=[],
+                           trigger_libs=["http_parser_static"],
+                           trigger_frameworks=["http_parser_static"])
+
+        # uriparse cannot be compiled on Windows
+        if not isWin32:
+            prog_obj = env.Object(http_parser.path+'/test.c', CPPPATH=cpppath, CCFLAGS=ccflags)
+
+            prog = env.Program('http_parser_test',
+                               prog_obj,
+                               LIBS=['http_parser'],
+                               CPPPATH=cpppath,
+                               CCFLAGS=ccflags)
+
+# Compile jansson
+
+jansson = LibConfig(dir = env.Dir('jansson').srcnode().abspath,
+                    url = "https://github.com/akheron/jansson",
+                    pkg_name = "jansson",
+                    path = "jansson",
+                    branch = "2.5")
+
+build_pkg = jansson.clone()
+
+if build_pkg:
+    ccflags = env.Split('$CCFLAGS')
+    if isGCC:
+        ccflags.append('-Wno-unused-function')
+
+    cpppath = [env.Dir(jansson.path+'/src').path]
+    # FIXME remove hardcoded settings
+    config_dict = {'@json_inline@' : '',
+                   '@json_have_long_long@' : '1',
+                   '@json_have_localeconv@' : '1'}
+
+    config_file = env.Substfile(jansson.path+'/src/jansson_config.h.in',
+                                SUBST_DICT = config_dict)
+
+    if True:
+        # Native
+        objects = []
+        for f in env.Glob(jansson.path+'/src/*.c'):
+            obj = env.Object(f, CPPPATH=cpppath, CCFLAGS=ccflags)
+            objects.extend(obj)
+        jansson_static = env.Library('jansson', objects)
+
+        env.DeclarePackage("jansson_static",
+                           LIBS=[jansson_static[:]],
+                           CPPPATH=cpppath,
+                           dependencies=[],
+                           trigger_libs=["jansson_static"],
+                           trigger_frameworks=["jansson_static"])
+
+        prog_obj = env.Object(jansson.path+'/test/bin/json_process.c', CPPPATH=cpppath, CCFLAGS=ccflags)
+
+        prog = env.Program('json_process',
+                           prog_obj,
+                           LIBS=['jansson'],
+                           CPPPATH=cpppath,
+                           CCFLAGS=ccflags)
+
+    if HAVE_LLVM and HAVE_LLVMTOOLS:
+        # Compile to bitcode
+
+        env2 = env.Clone()
+
+        env2.AppendUnique(LLVM_CPPDEFINES=['KIARA_LLVM'])
+        env2.AppendUnique(LLVM_CCFLAGS=env2.Split("-W -Wall -pedantic"))
+        if isX64:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m64'])
+        else:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m32'])
+        env2.AppendUnique(LLVM_OPTFLAGS=env2.Split("-O3"))
+        env2.AppendUnique(LLVM_CPPPATH=cpppath)
+
+        bitcode = env2.LLVMBitCode(env2.Glob(jansson.path+'/src/*.c'))
+
+        lib = env2.LLVMLink('jansson', bitcode)
+        lib_opt = env2.LLVMOpt(env2.GlobalLib('jansson_opt'), lib)
+        prog = env2.LLVMBitCode(env2.GlobalLib('json_process_prog.bc'),
+                                jansson.path+'/test/bin/json_process.c')
+
+        all = env2.LLVMLink(env2.GlobalLib('json_process_tool.bc'),
+                            lib_opt+prog)
+        third_party_libs['jansson'] = lib_opt
+
+
+# Compile orte-cdr
+
+ortecdr = LibConfig(dir=env.Dir('orte-cdr').srcnode().abspath,
+                    url=None,
+                    pkg_name="ortecdr",
+                    path="orte-cdr")
+
+build_pkg = True
+
+if build_pkg:
+    cppdefines = env.Split('$CPPDEFINES')
+    ccflags = env.Split('$CCFLAGS')
+    if isGCC:
+        ccflags.extend(env.Split('-Wno-unused-function'))
+
+    cpppath = [env.Dir(ortecdr.path+'/include').path, '#src']
+
+    if True:
+
+        def CheckEndianness(ctx, envKey="endianess"):
+            ctx.Message('Checking platform endianness... ')
+            ret, outputStr = ctx.TryRun("""
+            #include <stdio.h>
+            int main(int argc, char **argv) {
+              // From Harbison&Steele, adopted from cmake
+              union
+              {
+                long l;
+                char c[sizeof (long)];
+              } u;
+              u.l = 1;
+              if (u.c[sizeof (long) - 1] == 1)
+                printf("big\\n");
+              else
+                printf("little\\n");
+              return 0;
+            }
+            """, extension='.c')
+
+            if ret:
+                if outputStr.find('big') != -1:
+                    ctx.env[envKey] = 'big'
+                elif outputStr.find('little') != -1:
+                    ctx.env[envKey] = 'little'
+                else:
+                    ctx.Message('Could not determine platform endianess')
+                    ctx.Result(0)
+                    return 0
+
+            ctx.Result(ret)
+            return ret
+
+        conf = env.Configure(
+            conf_dir=env.GetConfigureDir(),
+            log_file=env.GetConfigureLogFile(),
+            custom_tests={'CheckEndianness' : CheckEndianness})
+
+        if not conf.CheckEndianness():
+            Exit(1)
+        env = conf.Finish()
+
+        if env['endianess'] == 'big':
+            cppdefines.append(['WORDS_BIGENDIAN',1])
+
+        # All sources
+        sources = []
+        sources.extend(env.Glob(ortecdr.path+'/src/*.c'))
+
+        # Build native version
+        objects = []
+        for f in sources:
+            obj = env.Object(f, CPPPATH=cpppath, CCFLAGS=ccflags, CPPDEFINES=cppdefines)
+            objects.extend(obj)
+        ortecdr_static = env.Library('ortecdr', objects, LIBPREFIX='lib')
+
+        env.DeclarePackage("ortecdr_static",
+                           LIBS=[ortecdr_static[:]],
+                           CPPPATH=cpppath,
+                           dependencies=[],
+                           trigger_libs=["ortecdr_static"],
+                           trigger_frameworks=["ortecdr_static"])
+
+        prog_obj = env.Object(ortecdr.path+'/tests/orte_cdr_test.c', CPPPATH=cpppath, CCFLAGS=ccflags)
+
+        prog = env.Program('orte_cdr_test',
+                           prog_obj,
+                           LIBS=['ortecdr_static'],
+                           CPPPATH=cpppath,
+                           CCFLAGS=ccflags,
+                           CPPDEFINES=cppdefines)
+
+    if HAVE_LLVM and HAVE_LLVMTOOLS:
+        # Compile to bitcode
+
+        env2 = env.Clone()
+        print 'ENV was',env['ENV']['PATH']
+        print 'ENV is',env2['ENV']['PATH']
+
+        env2.AppendUnique(LLVM_CPPDEFINES=['KIARA_LLVM'])
+        if env2['endianess'] == 'big':
+            env2.AppendUnique(LLVM_CPPDEFINES=['WORDS_BIGENDIAN',1])
+
+        env2.AppendUnique(LLVM_CCFLAGS=env2.Split("-W -Wall -pedantic"))
+        if isX64:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m64'])
+        else:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m32'])
+        env2.AppendUnique(LLVM_OPTFLAGS=env2.Split("-O3"))
+        env2.AppendUnique(LLVM_CPPPATH=cpppath)
+
+        bitcode = env2.LLVMBitCode(sources)
+
+        lib = env2.LLVMLink('ortecdr', bitcode)
+        lib_opt = env2.LLVMOpt(env2.GlobalLib('ortecdr_opt'), lib)
+        prog = env2.LLVMBitCode(env2.GlobalLib('orte_cdr_test_prog.bc'),
+                                ortecdr.path+'/tests/orte_cdr_test.c')
+        all = env2.LLVMLink(env2.GlobalLib('orte_cdr_test_tool_nopt.bc'),
+                            lib_opt+prog)
+        all_opt = env2.LLVMOpt(env2.GlobalLib('orte_cdr_test_tool.bc'), all)
+
+        third_party_libs['ortecdr'] = lib_opt
+
+# Compile fastcdr
+
+fastcdr = LibConfig(dir=env.Dir('fastcdr').srcnode().abspath,
+                    url="gitor@dornbirn.zhaw.ch:kiara/fastcdr.git",
+                    pkg_name="fastcdr",
+                    path="fastcdr",
+                    branch = "devel")
+fastcdr.version = '0.2.1'
+
+eprosima_common = LibConfig(dir=env.Dir('eprosima-common').srcnode().abspath,
+                            url="gitor@dornbirn.zhaw.ch:kiara/eprosima-common.git",
+                            pkg_name="eprosima-common",
+                            path="eprosima-common")
+
+build_pkg = fastcdr.clone()
+
+if build_pkg:
+    build_pkg = eprosima_common.clone()
+
+if build_pkg:
+    cppdefines = env.Split('$CPPDEFINES')
+    ccflags = env.Split('$CCFLAGS')
+    if isGCC:
+        ccflags.extend(env.Split('-Wno-unused-function'))
+
+    cpppath = [env.Dir(fastcdr.path+'/include').path,
+               env.Dir(eprosima_common.path+'/code').path]
+
+    if True:
+
+        def CheckEndianness(ctx, envKey="endianess"):
+            ctx.Message('Checking platform endianness... ')
+            ret, outputStr = ctx.TryRun("""
+            #include <stdio.h>
+            int main(int argc, char **argv) {
+              // From Harbison&Steele, adopted from cmake
+              union
+              {
+                long l;
+                char c[sizeof (long)];
+              } u;
+              u.l = 1;
+              if (u.c[sizeof (long) - 1] == 1)
+                printf("big\\n");
+              else
+                printf("little\\n");
+              return 0;
+            }
+            """, extension='.c')
+
+            if ret:
+                if outputStr.find('big') != -1:
+                    ctx.env[envKey] = 'big'
+                elif outputStr.find('little') != -1:
+                    ctx.env[envKey] = 'little'
+                else:
+                    ctx.Message('Could not determine platform endianess')
+                    ctx.Result(0)
+                    return 0
+
+            ctx.Result(ret)
+            return ret
+
+        conf = env.Configure(
+            conf_dir=env.GetConfigureDir(),
+            log_file=env.GetConfigureLogFile(),
+            custom_tests={'CheckEndianness' : CheckEndianness})
+
+        if not conf.CheckEndianness():
+            Exit(1)
+        env = conf.Finish()
+
+        if env['endianess'] == 'big':
+            cppdefines.append('__BIG_ENDIAN__')
+        else:
+            cppdefines.append('__LITTLE_ENDIAN__')
+
+	    cppdefines.append('BUILD_FOR_KIARA')
+
+        # All sources
+        sources = []
+        sources.extend(env.Glob(fastcdr.path+'/src/c/*.c'))
+
+        # Build native version
+        objects = []
+        for f in sources:
+            obj = env.Object(f, CPPPATH=cpppath, CCFLAGS=ccflags, CPPDEFINES=cppdefines)
+            objects.extend(obj)
+        fastcdr_static = env.Library('fastcdr-'+fastcdr.version, objects, LIBPREFIX='lib')
+
+        env.DeclarePackage("fastcdr_static",
+                           LIBS=[fastcdr_static[:]],
+                           CPPPATH=cpppath,
+                           dependencies=[],
+                           trigger_libs=["fastcdr_static"],
+                           trigger_frameworks=["fastcdr_static"])
+
+        prog_obj = env.Object(fastcdr.path+'/utils/pcTests/ResizeTest/ResizeTest.c', CPPPATH=cpppath, CCFLAGS=ccflags)
+
+        prog = env.Program('FastCDR_ResizeTest',
+                           prog_obj,
+                           LIBS=['fastcdr_static'],
+                           CPPPATH=cpppath,
+                           CCFLAGS=ccflags,
+                           CPPDEFINES=cppdefines)
+
+    if HAVE_LLVM and HAVE_LLVMTOOLS:
+        # Compile to bitcode
+
+        env2 = env.Clone()
+        print 'ENV was',env['ENV']['PATH']
+        print 'ENV is',env2['ENV']['PATH']
+
+        env2.AppendUnique(LLVM_CPPDEFINES=['KIARA_LLVM'])
+        if env2['endianess'] == 'big':
+            env2.AppendUnique(LLVM_CPPDEFINES='__BIG_ENDIAN__')
+        else:
+            env2.AppendUnique(LLVM_CPPDEFINES='__LITTLE_ENDIAN__')
+
+        env2.AppendUnique(LLVM_CPPDEFINES='BUILD_FOR_KIARA')
+
+        # Following option is only required for MCJIT fix
+        # See: http://lists.cs.uiuc.edu/pipermail/llvmdev/2013-January/058748.html
+        mcjitFix = env2.Split("-fno-use-cxa-atexit")
+        env2.AppendUnique(LLVM_CCFLAGS=env2.Split("-W -Wall -pedantic")+mcjitFix)
+        if isX64:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m64'])
+        else:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m32'])
+        env2.AppendUnique(LLVM_OPTFLAGS=env2.Split("-O3"))
+        env2.AppendUnique(LLVM_CPPPATH=cpppath)
+
+        bitcode = env2.LLVMBitCode(sources)
+
+        lib = env2.LLVMLink('fastcdr', bitcode)
+        lib_opt = env2.LLVMOpt(env2.GlobalLib('fastcdr_opt'), lib)
+        prog = env2.LLVMBitCode(env2.GlobalLib('FastCDR_ResizeTest_prog.bc'),
+                                fastcdr.path+'/utils/pcTests/ResizeTest/ResizeTest.c')
+        all = env2.LLVMLink(env2.GlobalLib('FastCDR_ResizeTest_tool_nopt.bc'),
+                            lib_opt+prog)
+        all_opt = env2.LLVMOpt(env2.GlobalLib('FastCDR_ResizeTest_tool.bc'), all)
+
+        third_party_libs['fastcdr'] = lib_opt
+
+# Compile curl
+curl_enabled = False
+curl_dir = env.Dir('curl').srcnode().abspath
+url = "git://github.com/bagder/curl.git"
+pkg_name = "curl"
+path = pkg_name
+build_pkg = False
+if curl_enabled:
+    # Checkout curl if required
+    if not os.path.exists(curl_dir):
+        status = subprocess.call(["git","clone","-n",url,path], cwd=this_dir)
+        if status == 0:
+            status = subprocess.call(["git", "checkout",
+                                      "74fe1b95fb44053fdbef4b1eb9f550a3da332eda"],
+                                     cwd=curl_dir)
+
+        if status == 0:
+            print 'Successfully cloned %s from "%s"' % (pkg_name, url)
+            status = subprocess.call(["git", "apply","--whitespace=fix",
+                                      os.path.join(this_dir, "curl.patch")],
+                                     cwd=curl_dir)
+            if status == 0:
+                print 'Successfully patched %s' % (pkg_name,)
+                build_pkg = True
+            else:
+                print 'Could not patch %s' % (pkg_name,)
+        else:
+            print 'Could not clone %s from "%s"' % (pkg_name, url)
+    else:
+        build_pkg = True
+
+if build_pkg:
+    public_cpppath = [path+'/include', path+'/include/curl']
+    cpppath = public_cpppath + [path+'/lib', path+'/src']
+    public_cpppath = [env.Dir(p).path for p in public_cpppath]
+
+    fd = open(os.path.join(curl_dir, 'CMake', 'CurlTests.c'), 'r')
+    CMakeTests = fd.read()
+    fd.close()
+
+    if isWin32:
+        CURL_DISABLE_LDAP = True
+        CURL_DISABLE_LDAPS = True
+    else:
+        CURL_DISABLE_LDAP = False
+        CURL_DISABLE_LDAPS = False
+
+    sysLibs = []
+    if True:
+        # Native
+
+        conf = env.Configure(
+            conf_dir=env.GetConfigureDir(),
+            log_file=env.GetConfigureLogFile(),
+            config_h=path+'/lib/curl_config.h',
+            custom_tests={'CheckStruct' : CheckStruct,
+                          'RunSource' : RunSource,
+                          'CompileSource' : CompileSource})
+
+        CONFIG_H_TEXT = ''
+        CONFIG_H_DEFS = {}
+
+        def CfgDefine(name, value=None, ifNotDefined=False):
+            global CONFIG_H_TEXT
+            defstr = ''
+            indent = ''
+            if ifNotDefined:
+                indent = ' '
+            if value is None:
+                defstr = '#%sdefine %s' % (indent, name)
+            else:
+                defstr = '#%sdefine %s %s' % (indent, name, str(value))
+            if ifNotDefined:
+                CONFIG_H_TEXT += '#ifndef %s\n' % name
+            CONFIG_H_TEXT += defstr + '\n'
+            CONFIG_H_DEFS[name] = value
+            if ifNotDefined:
+                CONFIG_H_TEXT += '#endif\n'
+
+        # TODO: Improve CQuote
+        def CQuote(s):
+            return '"'+s+'"'
+
+        def CheckFeature(feature):
+            result = conf.CompileSource(feature, '#define '+feature+'\n'+CONFIG_H_TEXT+'\n'+CMakeTests, '.c')
+            if result:
+                conf.Define(feature, 1)
+            return result
+
+        HAVE_LDAP_H = conf.CheckCHeader('ldap.h', include_quotes='<>')
+        HAVE_LIBLDAP = conf.CheckLib('ldap')
+
+        if not HAVE_LDAP_H or not HAVE_LIBLDAP:
+            CURL_DISABLE_LDAP = True
+            CURL_DISABLE_LDAPS = True
+
+        if CURL_DISABLE_LDAP:
+            conf.Define('CURL_DISABLE_LDAP', 'ON')
+        if CURL_DISABLE_LDAPS:
+            conf.Define('CURL_DISABLE_LDAPS', 'ON')
+
+        if isWin32:
+            #conf.Define('HAVE_LIBDL', 0)
+            #conf.Define('HAVE_LIBUCB', 0)
+            #conf.Define('HAVE_LIBSOCKET', 0)
+            #conf.Define('NOT_NEED_LIBNSL', 0)
+            #conf.Define('HAVE_LIBNSL', 0)
+            #conf.Define('HAVE_LIBZ', 0)
+            #conf.Define('HAVE_LIBCRYPTO', 0)
+
+            #conf.Define('HAVE_DLOPEN', 0)
+
+            #conf.Define('HAVE_ALLOCA_H', 0)
+            #conf.Define('HAVE_ARPA_INET_H', 0)
+            #conf.Define('HAVE_DLFCN_H', 0)
+            conf.Define('HAVE_FCNTL_H', 1)
+            #conf.Define('HAVE_FEATURES_H', 0)
+            #conf.Define('HAVE_INTTYPES_H', 0)
+            conf.Define('HAVE_IO_H', 1)
+            conf.Define('HAVE_MALLOC_H', 1)
+            conf.Define('HAVE_MEMORY_H', 1)
+            #conf.Define('HAVE_NETDB_H', 0)
+            #conf.Define('HAVE_NETINET_IF_ETHER_H', 0)
+            #conf.Define('HAVE_NETINET_IN_H', 0)
+            #conf.Define('HAVE_NET_IF_H', 0)
+            conf.Define('HAVE_PROCESS_H', 1)
+            #conf.Define('HAVE_PWD_H', 0)
+            conf.Define('HAVE_SETJMP_H', 1)
+            #conf.Define('HAVE_SGTTY_H', 0)
+            conf.Define('HAVE_SIGNAL_H', 1)
+            #conf.Define('HAVE_SOCKIO_H', 0)
+            #conf.Define('HAVE_STDINT_H', 0)
+            conf.Define('HAVE_STDLIB_H', 1)
+            #conf.Define('HAVE_STRINGS_H', 0)
+            conf.Define('HAVE_STRING_H', 1)
+            #conf.Define('HAVE_SYS_PARAM_H', 0)
+            #conf.Define('HAVE_SYS_POLL_H', 0)
+            #conf.Define('HAVE_SYS_SELECT_H', 0)
+            #conf.Define('HAVE_SYS_SOCKET_H', 0)
+            HAVE_SYS_SOCKET_H = 0
+            #conf.Define('HAVE_SYS_SOCKIO_H', 0)
+            conf.Define('HAVE_SYS_STAT_H', 1)
+            #conf.Define('HAVE_SYS_TIME_H', 0)
+            conf.Define('HAVE_SYS_TYPES_H', 1)
+            conf.Define('HAVE_SYS_UTIME_H', 1)
+            #conf.Define('HAVE_TERMIOS_H', 0)
+            #conf.Define('HAVE_TERMIO_H', 0)
+            conf.Define('HAVE_TIME_H', 1)
+            #conf.Define('HAVE_UNISTD_H', 0)
+            #conf.Define('HAVE_UTIME_H', 0)
+            #conf.Define('HAVE_X509_H', 0)
+            #conf.Define('HAVE_ZLIB_H', 0)
+
+            conf.Define('HAVE_SIZEOF_LONG_DOUBLE', 1)
+            conf.Define('SIZEOF_LONG_DOUBLE', 8)
+
+            conf.Define('HAVE_SOCKET', 1)
+            #conf.Define('HAVE_POLL', 0)
+            conf.Define('HAVE_SELECT', 1)
+            conf.Define('HAVE_STRDUP', 1)
+            conf.Define('HAVE_STRSTR', 1)
+            #conf.Define('HAVE_STRTOK_R', 0)
+            conf.Define('HAVE_STRFTIME', 1)
+            #conf.Define('HAVE_UNAME', 0)
+            #conf.Define('HAVE_STRCASECMP', 0)
+            conf.Define('HAVE_STRICMP', 1)
+            conf.Define('HAVE_STRCMPI', 1)
+            conf.Define('HAVE_GETHOSTBYADDR', 1)
+            #conf.Define('HAVE_GETTIMEOFDAY', 0)
+            conf.Define('HAVE_INET_ADDR', 1)
+            conf.Define('HAVE_INET_NTOA', 1)
+            #conf.Define('HAVE_INET_NTOA_R', 0)
+            #conf.Define('HAVE_TCGETATTR', 0)
+            #conf.Define('HAVE_TCSETATTR', 0)
+            conf.Define('HAVE_PERROR', 1)
+            conf.Define('HAVE_CLOSESOCKET', 1)
+            #conf.Define('HAVE_SETVBUF', 0)
+            #conf.Define('HAVE_SIGSETJMP', 0)
+            #conf.Define('HAVE_GETPASS_R', 0)
+            #conf.Define('HAVE_STRLCAT', 0)
+            #conf.Define('HAVE_GETPWUID', 0)
+            #conf.Define('HAVE_GETEUID', 0)
+            conf.Define('HAVE_UTIME', 1)
+            #conf.Define('HAVE_RAND_EGD', 0)
+            #conf.Define('HAVE_RAND_SCREEN', 0)
+            #conf.Define('HAVE_RAND_STATUS', 0)
+            #conf.Define('HAVE_GMTIME_R', 0)
+            #conf.Define('HAVE_LOCALTIME_R', 0)
+            #conf.Define('HAVE_GETHOSTBYADDR_R', 0)
+            #conf.Define('HAVE_GETHOSTBYNAME_R', 0)
+            conf.Define('HAVE_SIGNAL_FUNC', 1)
+            #conf.Define('HAVE_SIGNAL_MACRO', 0)
+
+            #conf.Define('HAVE_GETHOSTBYADDR_R_5', 0)
+            #conf.Define('HAVE_GETHOSTBYADDR_R_5_REENTRANT', 0)
+            #conf.Define('HAVE_GETHOSTBYADDR_R_7', 0)
+            #conf.Define('HAVE_GETHOSTBYADDR_R_7_REENTRANT', 0)
+            #conf.Define('HAVE_GETHOSTBYADDR_R_8', 0)
+            #conf.Define('HAVE_GETHOSTBYADDR_R_8_REENTRANT', 0)
+            #conf.Define('HAVE_GETHOSTBYNAME_R_3', 0)
+            #conf.Define('HAVE_GETHOSTBYNAME_R_3_REENTRANT', 0)
+            #conf.Define('HAVE_GETHOSTBYNAME_R_5', 0)
+            #conf.Define('HAVE_GETHOSTBYNAME_R_5_REENTRANT', 0)
+            #conf.Define('HAVE_GETHOSTBYNAME_R_6', 0)
+            #conf.Define('HAVE_GETHOSTBYNAME_R_6_REENTRANT', 0)
+
+            #conf.Define('TIME_WITH_SYS_TIME', 0)
+            #conf.Define('HAVE_O_NONBLOCK', 0)
+            #conf.Define('HAVE_IN_ADDR_T', 0)
+            #conf.Define('HAVE_INET_NTOA_R_DECL', 0)
+            #conf.Define('HAVE_INET_NTOA_R_DECL_REENTRANT', 0)
+            #conf.Define('HAVE_GETADDRINFO', 0)
+            conf.Define('STDC_HEADERS', 1)
+            conf.Define('RETSIGTYPE_TEST', 1)
+
+            #conf.Define('HAVE_SIGACTION', 0)
+            #conf.Define('HAVE_MACRO_SIGSETJMP', 0)
+
+            if conf.CheckCHeader('windows.h', include_quotes='<>'):
+                CfgDefine('HAVE_WINDOWS_H', 1)
+            if conf.CheckCHeader('winsock.h', include_quotes='<>'):
+                CfgDefine('HAVE_WINSOCK_H', 1)
+            if conf.CheckCHeader('winsock2.h', include_quotes='<>'):
+                CfgDefine('HAVE_WINSOCK2_H', 1)
+            if conf.CheckCHeader('ws2tcpip.h', include_quotes='<>'):
+                CfgDefine('HAVE_WS2TCPIP_H', 1)
+        else:
+            # Posix
+
+            for check in Split('''
+            TIME_WITH_SYS_TIME
+            HAVE_GETHOSTBYADDR_R_5
+            HAVE_GETHOSTBYADDR_R_5_REENTRANT
+            HAVE_GETHOSTBYADDR_R_7
+            HAVE_GETHOSTBYADDR_R_7_REENTRANT
+            HAVE_GETHOSTBYADDR_R_8
+            HAVE_GETHOSTBYADDR_R_8_REENTRANT
+            HAVE_GETHOSTBYNAME_R_5
+            HAVE_GETHOSTBYNAME_R_5_REENTRANT
+            HAVE_IN_ADDR_T
+            STDC_HEADERS
+            HAVE_INET_NTOA_R_DECL
+            HAVE_INET_NTOA_R_DECL_REENTRANT
+            HAVE_GETADDRINFO
+            HAVE_GLIBC_STRERROR_R
+            HAVE_POSIX_STRERROR_R
+            '''):
+                CheckFeature(check)
+
+            conf.CheckCHeader('fcntl.h', include_quotes='<>')
+            conf.CheckCHeader('netdb.h', include_quotes='<>')
+            conf.CheckCHeader('netinet/in.h', include_quotes='<>')
+            conf.CheckCHeader('process.h', include_quotes='<>')
+            conf.CheckCHeader('signal.h', include_quotes='<>')
+            conf.CheckCHeader('sgtty.h', include_quotes='<>')
+            conf.CheckCHeader('stdlib.h', include_quotes='<>')
+            conf.CheckCHeader('sys/param.h', include_quotes='<>')
+            conf.CheckCHeader('sys/select.h', include_quotes='<>')
+            HAVE_SYS_SOCKET_H = conf.CheckCHeader('sys/socket.h', include_quotes='<>')
+            conf.CheckCHeader('sys/sockio.h', include_quotes='<>')
+            conf.CheckCHeader('sys/stat.h', include_quotes='<>')
+            conf.CheckCHeader('sys/time.h', include_quotes='<>')
+            conf.CheckCHeader('sys/types.h', include_quotes='<>')
+            conf.CheckCHeader('sys/utime.h', include_quotes='<>')
+            conf.CheckCHeader('termio.h', include_quotes='<>')
+            conf.CheckCHeader('termios.h', include_quotes='<>')
+            conf.CheckCHeader('time.h', include_quotes='<>')
+            conf.CheckCHeader('unistd.h', include_quotes='<>')
+            conf.CheckCHeader('malloc.h', include_quotes='<>')
+            conf.CheckCHeader('memory.h', include_quotes='<>')
+
+        for check in Split('''
+        HAVE_GETHOSTBYNAME_R_3
+        HAVE_GETHOSTBYNAME_R_3_REENTRANT
+        HAVE_GETHOSTBYNAME_R_6
+        HAVE_GETHOSTBYNAME_R_6_REENTRANT
+        HAVE_BOOL_T
+        RETSIGTYPE_TEST
+        HAVE_FILE_OFFSET_BITS
+        HAVE_IOCTLSOCKET
+        HAVE_IOCTLSOCKET_CAMEL
+        HAVE_FCNTL_O_NONBLOCK
+        HAVE_IOCTLSOCKET_FIONBIO
+        HAVE_IOCTL_FIONBIO
+        HAVE_IOCTL_SIOCGIFADDR
+        HAVE_SETSOCKOPT_SO_NONBLOCK
+        '''):
+            CheckFeature(check)
+
+        HAVE_SOCKLEN_T = CheckFeature('HAVE_SOCKLEN_T')
+
+        conf.CheckCHeader('stdio.h', include_quotes='<>')
+        conf.CheckCHeader('inttypes.h', include_quotes='<>')
+        conf.CheckCHeader('assert.h', include_quotes='<>')
+        conf.CheckCHeader('crypto.h', include_quotes='<>')
+        conf.CheckCHeader('des.h', include_quotes='<>')
+        conf.CheckCHeader('err.h', include_quotes='<>')
+        conf.CheckCHeader('errno.h', include_quotes='<>')
+        conf.CheckCHeader('fcntl.h', include_quotes='<>')
+        conf.CheckCHeader('getopt.h', include_quotes='<>')
+        conf.CheckCHeader('limits.h', include_quotes='<>')
+        conf.CheckCHeader('locale.h', include_quotes='<>')
+        conf.CheckCHeader('ssl.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/crypto.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/engine.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/err.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/pem.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/pkcs12.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/rsa.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/ssl.h', include_quotes='<>')
+        conf.CheckCHeader('openssl/x509.h', include_quotes='<>')
+        conf.CheckCHeader('stdbool.h', include_quotes='<>')
+
+        conf.CheckCHeader('sys/poll.h', include_quotes='<>')
+        conf.CheckCHeader('poll.h', include_quotes='<>')
+
+        sizeof_size_t = conf.CheckTypeSize('size_t')
+        sizeof_ssize_t = conf.CheckTypeSize('ssize_t')
+        sizeof_long_long = conf.CheckTypeSize('long long')
+        sizeof_long = conf.CheckTypeSize('long')
+        sizeof_short = conf.CheckTypeSize('short')
+        sizeof_int = conf.CheckTypeSize('int')
+        sizeof___int64 = conf.CheckTypeSize('__int64')
+        sizeof_long_double = conf.CheckTypeSize('long double')
+        sizeof_time_t = conf.CheckTypeSize('time_t')
+
+        ssize_t = 'ssize_t'
+        if not sizeof_ssize_t:
+            if sizeof_long == sizeof_size_t:
+                ssize_t = 'long'
+                sizeof_ssize_t = sizeof_size_t
+                conf.Define('ssize_t', ssize_t)
+            elif sizeof___int64 == sizeof_size_t:
+                ssize_t = '__int64'
+                sizeof_ssize_t = sizeof_size_t
+                conf.Define('ssize_t', ssize_t)
+
+        if HAVE_SOCKLEN_T:
+            sizeof_socklen_t = conf.CheckTypeSize('socklen_t', '''
+            #ifdef _WIN32
+            #include <ws2tcpip.h>
+            #else
+            #include <sys/types.h>
+            #include <sys/socket.h>
+            #endif
+            ''')
+
+        if conf.CheckStruct('timeval', includes='#include <sys/time.h>') or \
+            conf.CheckStruct('timeval', includes='#include <time.h>'):
+            conf.Define('HAVE_STRUCT_TIMEVAL', 1)
+
+        recvWinTest = '''
+            #include <winsock2.h>
+            #include <Ws2tcpip.h>
+            int main() {
+                SOCKET s;
+                char *buf;
+                (void)recv(s, buf, 0, 0);
+                return 0;
+            }'''
+
+        if isWin32 and conf.CompileSource('C function recv()', recvWinTest, '.c'):
+            conf.Define('HAVE_RECV', 1)
+            # Hard-Coded Windows 32 settings
+            conf.Define('RECV_TYPE_ARG1', 'int')
+            conf.Define('RECV_TYPE_ARG2', 'void *')
+            conf.Define('RECV_TYPE_ARG3', 'size_t')
+            conf.Define('RECV_TYPE_ARG4', 'int')
+            conf.Define('RECV_TYPE_RETV', 'int')
+        elif conf.CheckFunc('recv', header='', language='C'):
+            # HAVE_RECV defined by CheckFunc
+            # Hard-Coded Linux 64 settings
+            conf.Define('RECV_TYPE_ARG1', 'int')
+            conf.Define('RECV_TYPE_ARG2', 'const void *')
+            conf.Define('RECV_TYPE_ARG3', 'size_t')
+            conf.Define('RECV_TYPE_ARG4', 'int')
+            conf.Define('RECV_TYPE_RETV', 'ssize_t')
+
+        sendWinTest = '''
+            #include <winsock2.h>
+            #include <Ws2tcpip.h>
+            int main() {
+                SOCKET s;
+                char *buf;
+                (void)send(s, buf, 0, 0);
+                return 0;
+            }'''
+
+        if isWin32 and conf.CompileSource('C function send()', sendWinTest, '.c'):
+            conf.Define('HAVE_SEND', 1)
+            # Hard-Coded Windows 32 settings
+            conf.Define('SEND_TYPE_ARG1', 'int')
+            conf.Define('SEND_QUAL_ARG2', 'const')
+            conf.Define('SEND_TYPE_ARG2', 'void *')
+            conf.Define('SEND_TYPE_ARG3', 'size_t')
+            conf.Define('SEND_TYPE_ARG4', 'int')
+            conf.Define('SEND_TYPE_RETV', 'int')
+        elif conf.CheckFunc('send', header='', language='C'):
+            # HAVE_SEND defined by CheckFunc
+            # Hard-Coded Linux 64 settings
+            conf.Define('SEND_TYPE_ARG1', 'int')
+            conf.Define('SEND_QUAL_ARG2', 'const')
+            conf.Define('SEND_TYPE_ARG2', 'void *')
+            conf.Define('SEND_TYPE_ARG3', 'size_t')
+            conf.Define('SEND_TYPE_ARG4', 'int')
+            conf.Define('SEND_TYPE_RETV', 'ssize_t')
+
+        conf.CheckFunc('basename', header='', language='C')
+        conf.CheckFunc('socket', header='', language='C')
+        conf.CheckFunc('poll', header='', language='C')
+        conf.CheckFunc('select', header='', language='C')
+        conf.CheckFunc('strdup', header='', language='C')
+        conf.CheckFunc('strstr', header='', language='C')
+        conf.CheckFunc('strtok_r', header='', language='C')
+        conf.CheckFunc('strftime', header='', language='C')
+        conf.CheckFunc('uname', header='', language='C')
+        conf.CheckFunc('strcasecmp', header='', language='C')
+        conf.CheckFunc('stricmp', header='', language='C')
+        conf.CheckFunc('strcmpi', header='', language='C')
+        conf.CheckFunc('strncmpi', header='', language='C')
+        conf.CheckFunc('alaram', header='', language='C')
+
+        #conf.Define('BUILDING_LIBCURL', 1)
+        if isWin32:
+            conf.Define('CURL_LDAP_WIN', 'ON')
+            conf.Define('OS', '"Windows"')
+        else:
+            conf.Define('OS', '"Linux"') # Hard-Coded Linux
+
+        conf.Finish()
+
+        CURL_SIZEOF_LONG = sizeof_long
+        CURL_TYPEOF_CURL_OFF_T = None
+
+        if sizeof_long == 8:
+            CURL_TYPEOF_CURL_OFF_T = 'long'
+            CURL_SIZEOF_CURL_OFF_T = 8
+            CURL_FORMAT_CURL_OFF_T = '"ld"'
+            CURL_FORMAT_CURL_OFF_TU = '"lu"'
+            CURL_FORMAT_OFF_T = '"%ld"'
+            CURL_SUFFIX_CURL_OFF_T = 'L'
+            CURL_SUFFIX_CURL_OFF_TU = 'UL'
+
+        if sizeof_long_long == 8:
+            CURL_TYPEOF_CURL_OFF_T = "long long"
+            CURL_SIZEOF_CURL_OFF_T = 8
+            CURL_FORMAT_CURL_OFF_T = '"lld"'
+            CURL_FORMAT_CURL_OFF_TU = '"llu"'
+            CURL_FORMAT_OFF_T = '"%lld"'
+            CURL_SUFFIX_CURL_OFF_T = 'LL'
+            CURL_SUFFIX_CURL_OFF_TU = 'ULL'
+
+        if not CURL_TYPEOF_CURL_OFF_T:
+            CURL_TYPEOF_CURL_OFF_T = ssize_t
+            CURL_SIZEOF_CURL_OFF_T = sizeof_ssize_t
+            # TODO: need adjustment here.
+            CURL_FORMAT_CURL_OFF_T = '"ld"'
+            CURL_FORMAT_CURL_OFF_TU = '"lu"'
+            CURL_FORMAT_OFF_T = '"%ld"'
+            CURL_SUFFIX_CURL_OFF_T = 'L'
+            CURL_SUFFIX_CURL_OFF_TU = 'LU'
+
+        config_dict = {
+            '#undef CURL_SIZEOF_LONG' : '#define CURL_SIZEOF_LONG %i' % CURL_SIZEOF_LONG,
+            '#undef CURL_TYPEOF_CURL_OFF_T' : '#define CURL_TYPEOF_CURL_OFF_T %s' % CURL_TYPEOF_CURL_OFF_T,
+            '#undef CURL_FORMAT_CURL_OFF_T' : '#define CURL_FORMAT_CURL_OFF_T %s' % CURL_FORMAT_CURL_OFF_T,
+            '#undef CURL_SIZEOF_CURL_OFF_T' : '#define CURL_SIZEOF_CURL_OFF_T %i' % CURL_SIZEOF_CURL_OFF_T,
+            '#undef CURL_FORMAT_CURL_OFF_TU' : '#define CURL_FORMAT_CURL_OFF_TU %s' % CURL_FORMAT_CURL_OFF_TU,
+            '#undef CURL_FORMAT_OFF_T' : '#define CURL_FORMAT_OFF_T %s' % CURL_FORMAT_OFF_T,
+            '#undef CURL_SUFFIX_CURL_OFF_T' : '#define CURL_SUFFIX_CURL_OFF_T %s' % CURL_SUFFIX_CURL_OFF_T,
+            '#undef CURL_SUFFIX_CURL_OFF_TU' : '#define CURL_SUFFIX_CURL_OFF_TU %s' % CURL_SUFFIX_CURL_OFF_TU
+            }
+
+        if HAVE_SOCKLEN_T:
+            config_dict['#undef CURL_TYPEOF_CURL_SOCKLEN_T'] = '#define CURL_TYPEOF_CURL_SOCKLEN_T socklen_t'
+            config_dict['#undef CURL_SIZEOF_CURL_SOCKLEN_T'] = '#define CURL_SIZEOF_CURL_SOCKLEN_T %i' % sizeof_socklen_t
+            if isWin32:
+                config_dict['#undef CURL_PULL_WS2TCPIP_H'] = '#define CURL_PULL_WS2TCPIP_H'
+            if HAVE_SYS_SOCKET_H:
+                config_dict['#undef CURL_PULL_SYS_SOCKET_H'] = '#define CURL_PULL_SYS_SOCKET_H 1'
+        else:
+            config_dict['#undef CURL_TYPEOF_CURL_SOCKLEN_T'] = '#define CURL_TYPEOF_CURL_SOCKLEN_T int'
+            config_dict['#undef CURL_SIZEOF_CURL_SOCKLEN_T'] = '#define CURL_SIZEOF_CURL_SOCKLEN_T SIZEOF_INT'
+
+        config_file = env.Substfile(path+'/include/curl/curlbuild.h.in',
+                                    SUBST_DICT = config_dict)
+
+        # system libraries for curl
+        if isWin32:
+            sysLibs.append('wsock32')
+            sysLibs.append('ws2_32')
+            if CURL_DISABLE_LDAP:
+                if 'wldap32' in sysLibs:
+                    sysLibs.remove('wldap32')
+            else:
+                sysLibs.append('wldap32')
+            sysLibs.append('advapi32')
+        else:
+            if not CURL_DISABLE_LDAP:
+                sysLibs.append('ldap')
+                sysLibs.append('lber')
+                
+        # curl library sources
+        curl_lib_sources = env.Glob(path+'/lib/*.c')
+        #sources = exclude(sources, env.Split(''' '''))
+        
+        # static curl library
+        objects = []
+        sources = curl_lib_sources
+
+        basic_cppdefines = ['HAVE_CONFIG_H', 'BUILDING_LIBCURL']
+        if isWin32:
+            basic_cppdefines.append(('_WIN32_WINNT', '0x0501'))
+
+        static_cppdefines = basic_cppdefines+['CURL_STATICLIB']
+
+        for f in curl_lib_sources:
+            obj = env.Object(f, CPPPATH=cpppath, CPPDEFINES=static_cppdefines)
+            objects.extend(obj)
+        curl_static = env.Library('curl', objects)
+
+        env.DeclarePackage("curl_static",
+                           LIBS=[curl_static[:]]+sysLibs,
+                           CPPPATH=public_cpppath,
+                           CPPDEFINES=['CURL_STATICLIB'],
+                           dependencies=[],
+                           trigger_libs=["curl_static"],
+                           trigger_frameworks=["curl_static"])
+                           
+        # curl tool (statically linked)
+        objects = []
+        sources = env.Glob(path+'/src/*.c')
+
+        for f in sources:
+            obj = env.Object(f, CPPPATH=cpppath, CPPDEFINES=static_cppdefines)
+            objects.extend(obj)
+        libs = ['curl_static']
+        libs.extend(sysLibs)
+        env.Program('curl', objects, LIBS=libs)
+
+        # shared curl library
+        objects = []
+        shared_cppdefines = basic_cppdefines[:]
+
+        for f in curl_lib_sources:
+            obj = env.SharedObject(target=env.subst("${SOURCE.filebase}_shared", source=f), source=f, CPPPATH=cpppath, CPPDEFINES=shared_cppdefines)
+            objects.extend(obj)
+        curl_shared = env.SharedLibrary('curl_shared', objects, LIBS=sysLibs)
+
+        env.DeclarePackage("curl_shared", 
+            LIBS=[curl_shared[:]],
+            dependencies=[],
+            trigger_libs=["curl_shared"],
+            trigger_frameworks=["curl_shared"])
+
+    if bool(env.get('HAVE_LLVM')):
+        # Compile to bitcode
+
+        env2 = env.Clone()
+
+        env2.AppendUnique(LLVM_CCFLAGS=env2.Split("-W -Wall -pedantic"))
+        if isX64:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m64'])
+        else:
+            env2.AppendUnique(LLVM_CCFLAGS=['-m32'])
+        env2.AppendUnique(LLVM_OPTFLAGS=env2.Split("-O3"))
+        env2.AppendUnique(LLVM_CPPPATH=cpppath)
+        env2.AppendUnique(CPPPATH=cpppath)
+        env2.AppendUnique(LLVM_CPPDEFINES=static_cppdefines+['KIARA_LLVM', 'KIARA_LLVM_BITCODE'])
+
+        sources = exclude(env2.Glob(path+'/lib/*.c'), env.Split('warnless.c'))
+
+        deleteSymbols = []
+        if isWin32:
+            deleteSymbols = Split('''
+            RtlSecureZeroMemory
+            HEAP_MAKE_TAG_FLAGS
+            TpInitializeCallbackEnviron
+            TpSetCallbackThreadpool
+            TpSetCallbackCleanupGroup
+            TpSetCallbackActivationContext
+            TpSetCallbackNoActivationContext
+            TpSetCallbackLongFunction
+            TpSetCallbackRaceWithDll
+            TpSetCallbackFinalizationCallback
+            TpDestroyCallbackEnviron
+            TpSetCallbackPersistent
+            HRESULT_FROM_WIN32
+            _InterlockedAdd
+            _InterlockedAdd64
+            MultiplyExtract128
+            UnsignedMultiplyExtract128
+            NtCurrentTeb
+            GetCurrentFiber
+            GetFiberData
+            DbgRaiseAssertionFailure
+            ''')
+
+        def FixBitcode(bitcode, env):
+            # Fix compiled bitcode
+            tmp = []
+            for f in bitcode:
+                tmp.extend(env2.RemoveAsm(env.subst("${SOURCE.base}_noasm", source=f), f,
+                                          DELETE_SYMBOLS=deleteSymbols))
+            bitcode = tmp
+            del tmp
+            return bitcode
+
+        bitcode = FixBitcode(env2.LLVMBitCode(sources), env2)
+
+        if isWin32:
+            # Avoid "command line too long" error message
+            tmp = []
+            stepSize = 5
+            i = 0
+            while len(bitcode):
+                stepBitcode = bitcode[0:stepSize]
+                bitcode = bitcode[stepSize:]
+                tmp.extend(env2.LLVMLink('curl_%i' % i, stepBitcode))
+                i+=1
+            lib = env2.LLVMLink('curl', tmp)
+        else:
+            lib = env2.LLVMLink('curl', bitcode)
+
+        lib_opt = env2.LLVMOpt(env2.GlobalLib('curl_opt'), lib)
+
+        bitcode = FixBitcode(env2.LLVMBitCode(env2.Glob(path+'/src/*.c')), env2)
+        prog = env2.LLVMLink(env2.GlobalLib('curl_tool_prog.bc'), bitcode)
+
+        all = env2.LLVMLink(env2.GlobalLib('curl_tool.bc'), lib_opt+prog)
+
+        warnless_shared = env2.SharedObject('warnless_llvm_shared', path+'/lib/warnless.c',
+                          CPPDEFINES=shared_cppdefines+['KIARA_LLVM'])
+
+        env2.SharedLibrary('warnless', warnless_shared, LIBS=sysLibs)
+
+        #env2.SharedLibrary('sysfunc', 'sysfunc.c')
+        third_party_libs['curl'] = lib_opt
+
+Return("third_party_libs")
+# Local Variables:
+# tab-width:4
+# indent-tabs-mode:nil
+# End:
+# vim: set expandtab tabstop=4 shiftwidth=4:

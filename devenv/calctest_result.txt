@@ -1,0 +1,10 @@
+Opening connection to http://localhost:8080/service...
+Type: kr_dstring_t is opaque
+
+KIARA DEBUG: Type is struct kr_dstring_t{api.GetCString : any<type:PFvvE>, api.SetCString : any<type:PFvvE>}
+calc.add: result = 53
+calc.addf: result = 53.000000
+calc.stringToInt32: result = 125
+calc.int32ToString: result = 42
+calc.stringToInt32: result = 521
+calc.int32ToString: result = 142

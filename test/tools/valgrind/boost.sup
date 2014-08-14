@@ -1,0 +1,9 @@
+{
+   Wrong Leak in boost::detail::get_once_per_thread_epoch
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN5boost6detail25get_once_per_thread_epochEv
+   ...
+   fun:_ZN5boost6detail23get_current_thread_dataEv
+   ...
+}

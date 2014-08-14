@@ -1,0 +1,66 @@
+extern [C] include_file_ctx(ctx:ptr(Context), fileName:ptr(char)):void;
+def include_file(fileName:ptr(char)) include_file_ctx(getContext(), fileName);
+
+include_file("stdlib.kl");
+
+struct UserString {
+  s:ptr(char);
+};
+
+def intrinsic [llvm,always_inline] __addressof__(v:ref(UserString)):ptr(UserString)
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret  ${rettype} %${argname0} "
+"}";
+
+def unary & (x:ref(UserString)):ptr(UserString) __addressof__(x);
+
+def intrinsic [llvm] binary . 80 (s:ref(UserString), sym:symbol("s")):ref(ptr(char))
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}, ${argtype1} %${argname1}) nounwind uwtable readnone {"
+"entry:"
+"  %r = getelementptr inbounds ${argtype0} %${argname0}, %size_t 0, i32 0"
+"  ret ${rettype} %r"
+"}";
+
+def intrinsic [llvm,always_inline] UserString_ptr_to_char_ptr_ptr(userString:ptr(UserString)):ptr(ptr(char))
+"define  ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  %r = bitcast ${argtype0} %${argname0} to ${rettype} "
+"  ret ${rettype} %r"
+"}";
+
+def assignUserString(userString:ptr(UserString), newValue:ptr(char)):int {
+    var str = UserString_ptr_to_char_ptr_ptr(userString) in {
+        free(*str);
+        *str = to_char_ptr(malloc(strlen(newValue)+to_size_t(1)));
+        strcpy(*str, newValue);
+    };
+    0;
+};
+
+typedef ptr(fun(ptr(UserString),ptr(char)):int) SetCString;
+typedef ref(fun(ptr(UserString),ptr(char)):int) SetCStringRef;
+
+def intrinsic [llvm, always_inline] __addressof__(v:SetCStringRef):SetCString
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret  ${rettype} %${argname0} "
+"}";
+
+def unary & (v:SetCStringRef):SetCString __addressof__(v);
+
+def setString(dest:ptr(UserString), data:ptr(char), x:SetCString):int {
+    x(dest, data);
+};
+
+def test():void {
+    var us:UserString in
+    var data = "ABC DEF 123 456" in {
+        setString(&us, data, &assignUserString);
+        print(us.s);
+        newline();
+        free(us.s);
+    };
+};
+
+test();

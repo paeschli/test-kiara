@@ -1,0 +1,61 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:Curl_nss_init
+   fun:curl_global_init
+   ...
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:Curl_nss_init
+   fun:curl_global_init
+   ...
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:PR_NewLogModule
+   ...
+   fun:curl_global_init
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:_PR_InitStuff
+   ...
+   fun:curl_global_init
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:_PR_InitStuff
+   ...
+   fun:curl_global_init
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:_PR_UnixInit
+   ...
+   fun:curl_global_init
+}

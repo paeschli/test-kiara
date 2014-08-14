@@ -1,0 +1,77 @@
+# Function to print a double.
+extern [C] printd(x:double):double;
+
+def intrinsic [llvm] binary = 2 (a:ref(double), b:double):double
+"define internal double @${mangledName}(double* nocapture %var, double %value) nounwind uwtable { "
+"  store double %value, double* %var "
+"  ret double %value "
+"}";
+
+def intrinsic [llvm] binary = 2 (a:ref(int), b:int):int
+"define internal %int @${mangledName}(%int* nocapture %var, %int %value) nounwind uwtable { "
+"  store %int %value, %int* %var "
+"  ret %int %value "
+"}";
+
+def intrinsic [llvm] muldd(a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %mul = fmul double %a, %b"
+"  ret double %mul"
+"}";
+
+def intrinsic [llvm] divdd(a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %div = fdiv double %a, %b"
+"  ret double %div"
+"}";
+
+def intrinsic [llvm] binary < 10 (a:double, b:double):boolean
+"define zeroext i1 @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %cmp = fcmp olt double %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def intrinsic [llvm] binary > 10 (a:double, b:double):boolean
+"define zeroext i1 @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %cmp = fcmp ogt double %a, %b"
+"  ret i1 %cmp"
+"}";
+
+def intrinsic [llvm] binary + 20 (a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %add = fadd double %a, %b"
+"  ret double %add"
+"}";
+
+def intrinsic [llvm] binary - 20 (a:double, b:double):double
+"define double @${mangledName}(double %a, double %b) nounwind uwtable readnone {"
+"  %sub = fsub double %a, %b"
+"  ret double %sub"
+"}";
+
+#def binary * 40 (a:double, b:double) muldd(a,b);
+#def binary / 40 (a:double, b:double) divdd(a,b);
+
+# Define ':' for sequencing: as a low-precedence operator that ignores operands
+# and just returns the RHS.
+def binary : 1 (x:double, y:double) y;
+
+# Recursive fib, we could do this before.
+def fib(x:double):double
+  if (x < 3.0) then
+    1.0
+  else
+    fib(x-1.0)+fib(x-2.0);
+
+# Iterative fib.
+def fibi(x:double)
+  var a = 1.0, b = 1.0, c=0.0 in
+  (for i = 3.0, i < x in
+     c = a + b :
+     a = b :
+     b = c) :
+  b;
+
+# Call it.
+printd(fibi(10.0));
+printd(fib(10.0));

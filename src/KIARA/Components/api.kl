@@ -1,0 +1,219 @@
+# Basic Definitions
+typedef int KIARA_Result;
+typedef int KIARA_Bool;
+
+# Network API
+struct KIARA_Message;
+struct KIARA_Connection;
+struct KIARA_Context;
+struct KIARA_FuncObj;
+struct KIARA_ServiceFuncObj;
+struct KIARA_ConnectionData;
+struct KIARA_BinaryStream;
+struct kr_dbuffer_t;
+
+# Custom user types and APIs
+struct KIARA_UserType;
+typedef ptr(fn(ptr(KIARA_UserType), ptr(char)) -> KIARA_Result) KIARA_SetCString;
+typedef ref(fn(ptr(KIARA_UserType), ptr(char)) -> KIARA_Result) KIARA_SetCStringRef;
+typedef ptr(fn(ptr(KIARA_UserType), ptr(ptr(char))) -> KIARA_Result) KIARA_GetCString;
+typedef ref(fn(ptr(KIARA_UserType), ptr(ptr(char))) -> KIARA_Result) KIARA_GetCStringRef;
+typedef ptr(fn(ptr(KIARA_UserType), int, ptr(char)) -> KIARA_Result) KIARA_SetGenericError;
+typedef ref(fn(ptr(KIARA_UserType), int, ptr(char)) -> KIARA_Result) KIARA_SetGenericErrorRef;
+typedef ptr(fn(ptr(KIARA_UserType), ptr(int), ptr(ptr(char))) -> KIARA_Result) KIARA_GetGenericError;
+typedef ref(fn(ptr(KIARA_UserType), ptr(int), ptr(ptr(char))) -> KIARA_Result) KIARA_GetGenericErrorRef;
+
+def intrinsic [llvm, always_inline] __addressof__(v:KIARA_SetCStringRef) -> KIARA_SetCString
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret  ${rettype} %${argname0} "
+"}";
+
+def [always_inline] unary & (v:KIARA_SetCStringRef) -> KIARA_SetCString __addressof__(v);
+
+def intrinsic [llvm, always_inline] __addressof__(v:KIARA_GetCStringRef) -> KIARA_GetCString
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret  ${rettype} %${argname0} "
+"}";
+
+def [always_inline] unary & (v:KIARA_GetCStringRef) -> KIARA_GetCString __addressof__(v);
+
+def intrinsic [llvm, always_inline] __addressof__(v:KIARA_SetGenericErrorRef) -> KIARA_SetGenericError
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret  ${rettype} %${argname0} "
+"}";
+
+def [always_inline] unary & (v:KIARA_SetGenericErrorRef) -> KIARA_SetGenericError __addressof__(v);
+
+def intrinsic [llvm, always_inline] __addressof__(v:KIARA_GetGenericErrorRef) -> KIARA_GetGenericError
+"define ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret  ${rettype} %${argname0} "
+"}";
+
+def [always_inline] unary & (v:KIARA_GetGenericErrorRef) -> KIARA_GetGenericError __addressof__(v);
+
+def intrinsic [llvm,always_inline] to_KIARA_UserType_ptr(value:ptr(void)) -> ptr(KIARA_UserType)
+"define  ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  %r = bitcast ${argtype0} %${argname0} to ${rettype} "
+"  ret ${rettype} %r"
+"}";
+
+def intrinsic [llvm,always_inline] to_kr_dbuffer_t_ptr(value:ptr(void)) -> ptr(kr_dbuffer_t)
+"define  ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  %r = bitcast ${argtype0} %${argname0} to ${rettype} "
+"  ret ${rettype} %r"
+"}";
+
+def intrinsic [llvm,always_inline] ignore_result(value:int) -> void
+"define  ${rettype} @${mangledName}(${argtype0} %${argname0}) nounwind uwtable readnone { "
+"entry: "
+"  ret void "
+"}";
+
+# Provided by the KIARA System
+extern [C] getConnection(closure:ptr(KIARA_FuncObj)) -> ptr(KIARA_Connection);
+extern [C] getServiceConnection(closure:ptr(KIARA_ServiceFuncObj)) -> ptr(KIARA_Connection);
+extern [C] getConnectionURI(conn:ptr(KIARA_Connection)) -> ptr(char);
+extern [C] getConnectionData(conn:ptr(KIARA_Connection)) -> ptr(KIARA_ConnectionData);
+extern [C] setConnectionData(conn:ptr(KIARA_Connection), data:ptr(KIARA_ConnectionData)) -> void;
+
+# Provided by the network/messaging implementation
+extern [C] createRequestMessage(conn:ptr(KIARA_Connection), name:ptr(char), name_length:size_t) -> ptr(KIARA_Message);
+extern [C] freeMessage(msg:ptr(KIARA_Message)) -> void;
+extern [C] sendMessageSync(conn:ptr(KIARA_Connection), outMsg:ptr(KIARA_Message), inMsg:ptr(KIARA_Message)) -> KIARA_Result;
+
+extern [C] writeStructBegin(msg:ptr(KIARA_Message), value:ptr(char)) -> KIARA_Result;
+extern [C] writeStructEnd(msg:ptr(KIARA_Message)) -> KIARA_Result;
+extern [C] writeFieldBegin(msg:ptr(KIARA_Message), value:ptr(char)) -> KIARA_Result;
+extern [C] writeFieldEnd(msg:ptr(KIARA_Message)) -> KIARA_Result;
+
+extern [C] readStructBegin(msg:ptr(KIARA_Message)) -> KIARA_Result;
+extern [C] readStructEnd(msg:ptr(KIARA_Message)) -> KIARA_Result;
+extern [C] readFieldBegin(msg:ptr(KIARA_Message), value:ptr(char)) -> KIARA_Result;
+extern [C] readFieldEnd(msg:ptr(KIARA_Message)) -> KIARA_Result;
+
+extern [C] writeArrayBegin(msg:ptr(KIARA_Message), size:size_t) -> KIARA_Result;
+extern [C] writeArrayEnd(msg:ptr(KIARA_Message)) -> KIARA_Result;
+
+extern [C] readArrayBegin(msg:ptr(KIARA_Message), size:ptr(size_t)) -> KIARA_Result;
+extern [C] readArrayEnd(msg:ptr(KIARA_Message)) -> KIARA_Result;
+
+extern [C] writeMessage_boolean(msg:ptr(KIARA_Message), value:int) -> KIARA_Result;
+
+extern [C] writeMessage_i8(msg:ptr(KIARA_Message), value:int8_t) -> KIARA_Result;
+extern [C] writeMessage_u8(msg:ptr(KIARA_Message), value:uint8_t) -> KIARA_Result;
+
+extern [C] writeMessage_i16(msg:ptr(KIARA_Message), value:int16_t) -> KIARA_Result;
+extern [C] writeMessage_u16(msg:ptr(KIARA_Message), value:uint16_t) -> KIARA_Result;
+
+extern [C] writeMessage_i32(msg:ptr(KIARA_Message), value:int32_t) -> KIARA_Result;
+extern [C] writeMessage_u32(msg:ptr(KIARA_Message), value:uint32_t) -> KIARA_Result;
+
+extern [C] writeMessage_i64(msg:ptr(KIARA_Message), value:int64_t) -> KIARA_Result;
+extern [C] writeMessage_u64(msg:ptr(KIARA_Message), value:uint64_t) -> KIARA_Result;
+
+extern [C] writeMessage_float(msg:ptr(KIARA_Message), value:float) -> KIARA_Result;
+extern [C] writeMessage_double(msg:ptr(KIARA_Message), value:double) -> KIARA_Result;
+
+extern [C] writeMessage_string(msg:ptr(KIARA_Message), value:ptr(char)) -> KIARA_Result;
+extern [C] writeMessage_user_string(msg:ptr(KIARA_Message), value:ptr(KIARA_UserType), getStringFunc:KIARA_GetCString) -> KIARA_Result;
+
+extern [C] readMessage_boolean(msg:ptr(KIARA_Message), value:ptr(int)) -> KIARA_Result;
+
+extern [C] readMessage_i8(msg:ptr(KIARA_Message), value:ptr(int8_t)) -> KIARA_Result;
+extern [C] readMessage_u8(msg:ptr(KIARA_Message), value:ptr(uint8_t)) -> KIARA_Result;
+
+extern [C] readMessage_i16(msg:ptr(KIARA_Message), value:ptr(int16_t)) -> KIARA_Result;
+extern [C] readMessage_u16(msg:ptr(KIARA_Message), value:ptr(uint16_t)) -> KIARA_Result;
+
+extern [C] readMessage_i32(msg:ptr(KIARA_Message), value:ptr(int32_t)) -> KIARA_Result;
+extern [C] readMessage_u32(msg:ptr(KIARA_Message), value:ptr(uint32_t)) -> KIARA_Result;
+
+extern [C] readMessage_i64(msg:ptr(KIARA_Message), value:ptr(int64_t)) -> KIARA_Result;
+extern [C] readMessage_u64(msg:ptr(KIARA_Message), value:ptr(uint64_t)) -> KIARA_Result;
+
+extern [C] readMessage_float(msg:ptr(KIARA_Message), value:ptr(float)) -> KIARA_Result;
+extern [C] readMessage_double(msg:ptr(KIARA_Message), value:ptr(double)) -> KIARA_Result;
+
+extern [C] readMessage_string(msg:ptr(KIARA_Message), value:ptr(ptr(char))) -> KIARA_Result;
+extern [C] readMessage_user_string(msg:ptr(KIARA_Message), value:ptr(KIARA_UserType), setStringFunc:KIARA_SetCString) -> KIARA_Result;
+
+extern [C] isErrorResponse(msg:ptr(KIARA_Message)) -> KIARA_Bool;
+extern [C] readGenericError(msg:ptr(KIARA_Message), userException:ptr(KIARA_UserType), setGenericErrorFunc:KIARA_SetGenericError) -> KIARA_Result;
+extern [C] writeGenericError(msg:ptr(KIARA_Message), userException:ptr(KIARA_UserType), getGenericErrorFunc:KIARA_GetGenericError) -> KIARA_Result;
+
+# Binary I/O
+
+extern [C] createOutputStream(conn:ptr(KIARA_Connection)) -> ptr(KIARA_BinaryStream);
+extern [C] createInputStream(conn:ptr(KIARA_Connection)) -> ptr(KIARA_BinaryStream);
+extern [C] freeStream(stream:ptr(KIARA_BinaryStream)) -> void;
+
+extern [C] copyStreamToBuffer(dest:ptr(kr_dbuffer_t), src:ptr(KIARA_BinaryStream)) -> void;
+extern [C] copyBufferToStream(dest:ptr(KIARA_BinaryStream), src:ptr(kr_dbuffer_t)) -> void;
+
+extern [C] writeStructBeginAsBinary(out:ptr(KIARA_BinaryStream), value:ptr(char)) -> KIARA_Result;
+extern [C] writeStructEndAsBinary(out:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+extern [C] writeFieldBeginAsBinary(out:ptr(KIARA_BinaryStream), value:ptr(char)) -> KIARA_Result;
+extern [C] writeFieldEndAsBinary(out:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+
+extern [C] readStructBeginAsBinary(in:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+extern [C] readStructEndAsBinary(in:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+extern [C] readFieldBeginAsBinary(in:ptr(KIARA_BinaryStream), value:ptr(char)) -> KIARA_Result;
+extern [C] readFieldEndAsBinary(in:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+
+extern [C] writeArrayBeginAsBinary(out:ptr(KIARA_BinaryStream), size:size_t) -> KIARA_Result;
+extern [C] writeArrayEndAsBinary(out:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+
+extern [C] readArrayBeginAsBinary(in:ptr(KIARA_BinaryStream), size:ptr(size_t)) -> KIARA_Result;
+extern [C] readArrayEndAsBinary(in:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+
+extern [C] writeTypeAsBinary_boolean(out:ptr(KIARA_BinaryStream), value:int) -> KIARA_Result;
+
+extern [C] writeTypeAsBinary_i8(out:ptr(KIARA_BinaryStream), value:int8_t) -> KIARA_Result;
+extern [C] writeTypeAsBinary_u8(out:ptr(KIARA_BinaryStream), value:uint8_t) -> KIARA_Result;
+
+extern [C] writeTypeAsBinary_i16(out:ptr(KIARA_BinaryStream), value:int16_t) -> KIARA_Result;
+extern [C] writeTypeAsBinary_u16(out:ptr(KIARA_BinaryStream), value:uint16_t) -> KIARA_Result;
+
+extern [C] writeTypeAsBinary_i32(out:ptr(KIARA_BinaryStream), value:int32_t) -> KIARA_Result;
+extern [C] writeTypeAsBinary_u32(out:ptr(KIARA_BinaryStream), value:uint32_t) -> KIARA_Result;
+
+extern [C] writeTypeAsBinary_i64(out:ptr(KIARA_BinaryStream), value:int64_t) -> KIARA_Result;
+extern [C] writeTypeAsBinary_u64(out:ptr(KIARA_BinaryStream), value:uint64_t) -> KIARA_Result;
+
+extern [C] writeTypeAsBinary_float(out:ptr(KIARA_BinaryStream), value:float) -> KIARA_Result;
+extern [C] writeTypeAsBinary_double(out:ptr(KIARA_BinaryStream), value:double) -> KIARA_Result;
+
+extern [C] writeTypeAsBinary_string(out:ptr(KIARA_BinaryStream), value:ptr(char)) -> KIARA_Result;
+extern [C] writeTypeAsBinary_user_string(out:ptr(KIARA_BinaryStream), value:ptr(KIARA_UserType), getStringFunc:KIARA_GetCString) -> KIARA_Result;
+
+extern [C] readTypeAsBinary_boolean(in:ptr(KIARA_BinaryStream), value:ptr(int)) -> KIARA_Result;
+
+extern [C] readTypeAsBinary_i8(in:ptr(KIARA_BinaryStream), value:ptr(int8_t)) -> KIARA_Result;
+extern [C] readTypeAsBinary_u8(in:ptr(KIARA_BinaryStream), value:ptr(uint8_t)) -> KIARA_Result;
+
+extern [C] readTypeAsBinary_i16(in:ptr(KIARA_BinaryStream), value:ptr(int16_t)) -> KIARA_Result;
+extern [C] readTypeAsBinary_u16(in:ptr(KIARA_BinaryStream), value:ptr(uint16_t)) -> KIARA_Result;
+
+extern [C] readTypeAsBinary_i32(in:ptr(KIARA_BinaryStream), value:ptr(int32_t)) -> KIARA_Result;
+extern [C] readTypeAsBinary_u32(in:ptr(KIARA_BinaryStream), value:ptr(uint32_t)) -> KIARA_Result;
+
+extern [C] readTypeAsBinary_i64(in:ptr(KIARA_BinaryStream), value:ptr(int64_t)) -> KIARA_Result;
+extern [C] readTypeAsBinary_u64(in:ptr(KIARA_BinaryStream), value:ptr(uint64_t)) -> KIARA_Result;
+
+extern [C] readTypeAsBinary_float(in:ptr(KIARA_BinaryStream), value:ptr(float)) -> KIARA_Result;
+extern [C] readTypeAsBinary_double(in:ptr(KIARA_BinaryStream), value:ptr(double)) -> KIARA_Result;
+
+extern [C] readTypeAsBinary_string(in:ptr(KIARA_BinaryStream), value:ptr(ptr(char))) -> KIARA_Result;
+extern [C] readTypeAsBinary_user_string(in:ptr(KIARA_BinaryStream), value:ptr(KIARA_UserType), setStringFunc:KIARA_SetCString) -> KIARA_Result;
+
+extern [C] writeMessage_binary_stream(msg:ptr(KIARA_Message), stream:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+extern [C] readMessage_binary_stream(msg:ptr(KIARA_Message), stream:ptr(KIARA_BinaryStream)) -> KIARA_Result;
+
+extern [C] encryptStream(conn:ptr(KIARA_Connection), stream:ptr(KIARA_BinaryStream), keyName:ptr(char)) -> KIARA_Result;
+extern [C] decryptStream(conn:ptr(KIARA_Connection), stream:ptr(KIARA_BinaryStream), keyName:ptr(char)) -> KIARA_Result;

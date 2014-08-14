@@ -1,0 +1,454 @@
+# From llvm/utils/valgrind/x86_64-pc-linux-gnu.supp
+{
+   False leak under RegisterPass
+   Memcheck:Leak
+   ...
+   fun:_ZN4llvm12PassRegistry12registerPassERKNS_8PassInfoE
+}
+
+# Python false positives according to
+# http://svn.python.org/projects/python/trunk/Misc/README.valgrind
+
+{
+   ADDRESS_IN_RANGE/Invalid read of size 4
+   Memcheck:Addr4
+   obj:/usr/bin/python*
+}
+
+{
+   ADDRESS_IN_RANGE/Invalid read of size 4
+   Memcheck:Value8
+   obj:/usr/bin/python*
+}
+
+{
+   ADDRESS_IN_RANGE/Conditional jump or move depends on uninitialised value
+   Memcheck:Cond
+   obj:/usr/bin/python*
+}
+
+{
+   We don't care if as leaks
+   Memcheck:Leak
+   obj:/usr/bin/as
+}
+
+{
+   We don't care of cmp
+   Memcheck:Cond
+   obj:/usr/bin/cmp
+}
+
+{
+   We don't care if grep leaks
+   Memcheck:Leak
+   obj:/bin/grep
+}
+
+{
+   We don't care if python leaks
+   Memcheck:Leak
+   fun:malloc
+   obj:/usr/bin/python*
+}
+
+{
+   We don't care about anything ld.so does.
+   Memcheck:Cond
+   obj:/lib/ld*.so
+}
+
+{
+  suppress optimized strcasecmp, to be fixed in valgrind 3.6.1
+  Memcheck:Value8
+  fun:__GI___strcasecmp_l
+}
+
+{
+  suppress optimized strcasecmp, to be fixed in valgrind 3.6.1
+  Memcheck:Addr8
+  fun:__GI___strcasecmp_l
+}
+
+# Own suppressions
+
+# Destruction of PassRegistry
+{
+   Leak on PassRegistry destruction
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm14object_creatorINS_12PassRegistryEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   ...
+   fun:_ZN4llvm12PassRegistry15getPassRegistryEv
+   ...
+   fun:_ZN4llvm14PassNameParserD1Ev
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED1Ev
+   fun:__cxa_finalize
+   ...
+}
+
+# llvm::X86TargetLowering::LowerCall
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZNK4llvm17X86TargetLowering9LowerCallERNS_14TargetLowering16CallLoweringInfoERNS_15SmallVectorImplINS_7SDValueEEE
+   fun:_ZNK4llvm14TargetLowering11LowerCallToERNS0_16CallLoweringInfoE
+   ...
+   fun:_ZN4llvm19SelectionDAGBuilder9visitCallERKNS_8CallInstE
+   fun:_ZN4llvm19SelectionDAGBuilder5visitEjRKNS_4UserE
+   fun:_ZN4llvm19SelectionDAGBuilder5visitERKNS_11InstructionE
+   fun:_ZN4llvm16SelectionDAGISel16SelectBasicBlockENS_14ilist_iteratorIKNS_11InstructionEEES4_Rb
+   fun:_ZN4llvm16SelectionDAGISel20SelectAllBasicBlocksERKNS_8FunctionE
+   fun:_ZN4llvm16SelectionDAGISel20runOnMachineFunctionERNS_15MachineFunctionE
+   fun:_ZN4llvm19MachineFunctionPass13runOnFunctionERNS_8FunctionE
+   fun:_ZN4llvm13FPPassManager13runOnFunctionERNS_8FunctionE
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm14object_creatorINS_3sys10SmartMutexILb1EEEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   ...
+   fun:_ZN4llvm12PassRegistry26removeRegistrationListenerEPNS_24PassRegistrationListenerE
+   ...
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED1Ev
+   fun:__cxa_finalize
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm3sys14DynamicLibrary19getPermanentLibraryEPKcPSs
+   ...
+   fun:_ZN4llvm13EngineBuilder6createEPNS_13TargetMachineE
+   fun:_ZN4llvm13EngineBuilder6createEv
+   ...
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   fun:_dlerror_run
+   fun:dlopen@@GLIBC_2.2.5
+   fun:_ZN4llvm3sys14DynamicLibrary19getPermanentLibraryEPKcPSs
+   fun:_ZN4llvm13EngineBuilder6createEPNS_13TargetMachineE
+   fun:_ZN4llvm13EngineBuilder6createEv
+   ...
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN4llvm3sys9MutexImplC1Eb
+   fun:_ZN4llvm14object_creatorINS_3sys10SmartMutexILb1EEEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm12PassRegistry26removeRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED1Ev
+   fun:__cxa_finalize
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   fun:__run_exit_handlers
+   fun:exit
+   fun:(below main)
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm8DenseMapIPvcNS_12DenseMapInfoIS1_EEE4growEj
+   fun:_ZN4llvm8DenseMapIPvcNS_12DenseMapInfoIS1_EEE16InsertIntoBucketERKS1_RKcPSt4pairIS1_cE
+   fun:_ZN4llvm8DenseMapIPvcNS_12DenseMapInfoIS1_EEE6insertERKSt4pairIS1_cE
+   fun:_ZN4llvm3sys14DynamicLibrary19getPermanentLibraryEPKcPSs
+   fun:_ZN4llvm13EngineBuilder6createEPNS_13TargetMachineE
+   fun:_ZN4llvm13EngineBuilder6createEv
+   ...
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm8DenseMapIPvcNS_12DenseMapInfoIS1_EEE15allocateBucketsEj
+   fun:_ZN4llvm8DenseMapIPvcNS_12DenseMapInfoIS1_EEE4growEj
+   fun:_ZN4llvm12DenseMapBaseINS_8DenseMapIPvcNS_12DenseMapInfoIS2_EEEES2_cS4_E4growEj
+   fun:_ZN4llvm12DenseMapBaseINS_8DenseMapIPvcNS_12DenseMapInfoIS2_EEEES2_cS4_E20InsertIntoBucketImplERKS2_PSt4pairIS2_cE
+   fun:_ZN4llvm12DenseMapBaseINS_8DenseMapIPvcNS_12DenseMapInfoIS2_EEEES2_cS4_E16InsertIntoBucketERKS2_RKcPSt4pairIS2_cE
+   fun:_ZN4llvm12DenseMapBaseINS_8DenseMapIPvcNS_12DenseMapInfoIS2_EEEES2_cS4_E6insertERKSt4pairIS2_cE
+   fun:_ZN4llvm8DenseSetIPvNS_12DenseMapInfoIS1_EEE6insertERKS1_
+   fun:_ZN4llvm3sys14DynamicLibrary19getPermanentLibraryEPKcPSs
+   fun:_ZN4llvm3sys14DynamicLibrary22LoadLibraryPermanentlyEPKcPSs
+   fun:_ZN4llvm13EngineBuilder6createEPNS_13TargetMachineE
+   fun:_ZN4llvm13EngineBuilder6createEv
+   ...
+}
+
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm14object_creatorINS_12PassRegistryEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm12PassRegistry15getPassRegistryEv
+   fun:_ZN4llvm24PassRegistrationListenerC1Ev
+   fun:_GLOBAL__I_a
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm14object_creatorISsEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_GLOBAL__I_a
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm14object_creatorINS_3sys10SmartMutexILb1EEEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm12PassRegistry23addRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_GLOBAL__I_a
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZNSt6vectorIPN4llvm24PassRegistrationListenerESaIS2_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS2_S4_EERKS2_
+   fun:_ZN4llvm12PassRegistry23addRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_GLOBAL__I_a
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN4llvm3sys9MutexImplC1Eb
+   fun:_ZN4llvm14object_creatorINS_3sys10SmartMutexILb1EEEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm12PassRegistry23addRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_GLOBAL__I_a
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm12PassRegistry23addRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_GLOBAL__I_a
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:/home/rubinste/proj_de3/install/build-gcc-opt-x86_64/llvm3/lib/libLLVM-3.1.so
+   obj:*
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_ZN4llvm3sys14DynamicLibrary19getPermanentLibraryEPKcPSs
+   fun:_ZN4llvm12PluginLoaderaSERKSs
+   ...
+   fun:main
+}
+
+{
+   see getElaspedWallTime() in llvm/lib/Support/Process.cpp
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZL18getElapsedWallTimev
+   ...
+}
+
+{
+   see self_process *process::get_self() in llvm/lib/Support/Process.cpp
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm3sys7process8get_selfEv
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm8DenseMapIPvcNS_12DenseMapInfoIS1_EEE4growEj
+   fun:_ZN4llvm12DenseMapBaseINS_8DenseMapIPvcNS_12DenseMapInfoIS2_EEEES2_cS4_E20InsertIntoBucketImplERKS2_PSt4pairIS2_cE
+   fun:_ZN4llvm12DenseMapBaseINS_8DenseMapIPvcNS_12DenseMapInfoIS2_EEEES2_cS4_E6insertERKSt4pairIS2_cE
+   fun:_ZN4llvm3sys14DynamicLibrary19getPermanentLibraryEPKcPSs
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN4llvm3sys9MutexImplC1Eb
+   fun:_ZN4llvm14object_creatorINS_3sys10SmartMutexILb1EEEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm12PassRegistry26removeRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED1Ev
+   fun:__cxa_finalize
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm14object_creatorINS_3sys10SmartMutexILb1EEEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm12PassRegistry26removeRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED1Ev
+   fun:__cxa_finalize
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm12JITRegistrar15getGDBRegistrarEv
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN4llvm3sys9MutexImplC1Eb
+   fun:_ZN4llvm3sys10SmartMutexILb1EEC2Eb
+   fun:_ZN4llvm3sys10SmartMutexILb1EEC1Eb
+   fun:_ZN4llvm14object_creatorINS_3sys10SmartMutexILb1EEEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm13ManagedStaticINS_3sys10SmartMutexILb1EEEEdeEv
+   fun:_ZN4llvm12PassRegistry26removeRegistrationListenerEPNS_24PassRegistrationListenerE
+   fun:_ZN4llvm24PassRegistrationListenerD1Ev
+   fun:_ZN4llvm14PassNameParserD1Ev
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED2Ev
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED1Ev
+   fun:__cxa_finalize
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__register_frame
+   fun:_ZN4llvmL10processFDEEPKc
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__register_frame
+   ...
+   fun:_ZN4llvm20SectionMemoryManager16registerEHFramesENS_9StringRefE
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_dl_signal_error
+   fun:_dl_signal_cerror
+   fun:_dl_lookup_symbol_x
+   fun:do_sym
+   fun:dlsym_doit
+   fun:_dl_catch_error
+   fun:_dlerror_run
+   fun:dlsym
+   fun:_ZN4llvm3sys14DynamicLibrary24SearchForAddressOfSymbolEPKc
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN4llvm14object_creatorINS_12PassRegistryEEEPvv
+   fun:_ZNK4llvm17ManagedStaticBase21RegisterManagedStaticEPFPvvEPFvS1_E
+   fun:_ZN4llvm13ManagedStaticINS_12PassRegistryEEdeEv
+   fun:_ZN4llvm12PassRegistry15getPassRegistryEv
+   fun:_ZN4llvm24PassRegistrationListenerD1Ev
+   fun:_ZN4llvm14PassNameParserD1Ev
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED2Ev
+   fun:_ZN4llvm2cl4listIPKNS_8PassInfoEbNS_14PassNameParserEED1Ev
+   fun:__cxa_finalize
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_dl_signal_error
+   fun:_dl_signal_cerror
+   fun:_dl_lookup_symbol_x
+   fun:do_sym
+   fun:dlsym_doit
+   fun:_dl_catch_error
+   fun:_dlerror_run
+   fun:dlsym
+   fun:_ZN4llvm3sys14DynamicLibrary24SearchForAddressOfSymbolEPKc
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   ...
+   fun:_ZN12_GLOBAL__N_115GDBJITRegistrar14registerObjectERKN4llvm12ObjectBufferE
+   ...
+}

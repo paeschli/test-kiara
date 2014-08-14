@@ -1,0 +1,77 @@
+namespace * benchmark
+
+struct MarketDataEntry
+{
+    u32 mdUpdateAction;
+    u32 mdPriceLevel;
+    double        mdEntryType;
+    u32 openCloseSettleFlag;
+    u32 securityIDSource;
+    u32 securityID;
+    u32 rptSeq;
+    double        mdEntryPx;
+    u32 mdEntryTime;   // timestamp
+    i32          mdEntrySize;
+    u32 numberOfOrders;
+    double        tradingSessionID;
+    double        netChgPrevDay;
+    u32 tradeVolume;
+    double        tradeCondition;
+    double        tickDirection;
+    double        quoteCondition;
+    u32 aggressorSide;
+    double        matchEventIndicator;
+
+    double dummy1;
+    float dummy2;
+}
+
+struct MarketData {
+    boolean    isEcho;
+    u32        counter;
+
+    u32        securityID;
+
+    double    applVersionID;
+    double    messageType;
+    double    senderCompID;
+    u32       msgSeqNum;
+    u32       sendingTime;   // timestamp
+    u32       tradeDate;
+
+    array<MarketDataEntry>  mdEntries;
+}
+
+struct RelatedSym {
+    double    symbol;
+    u64       orderQuantity;
+    u32    side;
+    u64    transactTime;  // timestamp
+    u32    quoteType;
+    u32      securityID;
+    u32      securityIDSource;
+
+    double dummy1;
+    float dummy2;
+}
+
+struct QuoteRequest {
+      boolean            is_echo;
+      u32      counter;
+
+      u32      securityID;
+
+      double             applVersionID;
+      double             messageType;
+      double             senderCompID;
+      u32      msgSeqNum;
+      u32      sendingTime;   // timestamp
+      double             quoteReqID;
+
+      array<RelatedSym>        related;
+}
+
+service benchmark {
+  MarketData marketData(MarketData marketData);
+  QuoteRequest quoteRequest(QuoteRequest quoteRequest);
+}
