@@ -26,6 +26,18 @@
 #include "URLLoader.hpp"
 #include <DFC/Base/Utils/StaticInit.hpp>
 #include <curl/curl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "../Transport/KT_Zeromq.hpp"
+#include "../Transport/KT_Msg.hpp"
+#include "../Transport/KT_HTTP_Parser.hpp"
+#include "../Transport/KT_HTTP_Responder.hpp"
+#include "../Transport/KT_HTTP_Requester.hpp"
+#include "../Utils/URL.hpp"
+#include <iostream>
+#include <iomanip>
+#include <unistd.h>
+
 
 // for debugging
 // #define SSL_DEBUG
@@ -206,8 +218,51 @@ bool URLLoader::sendData(Connection *connection, const std::string &url, const s
                          const void *data, size_t dataSize, kr_dbuffer_t *destBuf,
                          const SecurityConfiguration *securityConfiguration, std::string *errorMsg)
 {
-    CURLcode curlErr;
+	URL *kt_url = new URL(url, true);
 
+	KIARA::Transport::KT_Configuration config;
+	config.set_application_type ( KT_STREAM );
+
+	config.set_host( KT_TCP, kt_url->host, atoi(kt_url->port.c_str()));
+
+	KIARA::Transport::KT_Connection* kt_connection = new KIARA::Transport::KT_Zeromq ();
+	kt_connection->set_configuration (config);
+
+	KIARA::Transport::KT_Session* session = nullptr;
+
+	if ( 0 != kt_connection->connect(&session) )
+	{
+		std::cerr << "Failed to connect" << std::endl;
+	}
+
+	if (nullptr == session)
+	{
+		std::cerr << "Session object was not set" << std::endl;
+	}
+
+	KIARA::Transport::KT_Msg request;
+	
+	std::string kt_data = "";
+	kt_data.append((const char*)data);
+	
+	std::string payload = KIARA::Transport::KT_HTTP_Requester::generate_request("POST", kt_url->host, "/"+kt_url->path, std::vector<char>(kt_data.begin(), kt_data.end()));
+	request.set_payload(payload);
+
+	if (0 != kt_connection->send(request, *session, 0))
+	{
+		std::cerr << "Failed to send payload" << std::endl;
+	}
+
+	KIARA::Transport::KT_Msg reply;
+	if (0 != kt_connection->recv(*session, reply, 0))
+		std::cerr << "Receive failed" << std::endl;
+
+	KIARA::Transport::KT_HTTP_Parser parser (reply);
+	
+	kr_dbuffer_append_mem(destBuf, parser.get_payload().c_str(), (size_t) parser.get_payload().length());
+	
+	/*CURLcode curlErr;
+	
     curl_easy_setopt(connection->curlHandle, CURLOPT_POST, 1);
     curl_easy_setopt(connection->curlHandle, CURLOPT_CUSTOMREQUEST, "POST");
 
@@ -223,7 +278,7 @@ bool URLLoader::sendData(Connection *connection, const std::string &url, const s
      curl_easy_setopt(connection->curlHandle, CURLOPT_WRITEFUNCTION, &data_write);
      curl_easy_setopt(connection->curlHandle, CURLOPT_WRITEDATA, destBuf);
 
-     /* Get resouce from URL and send to STDOUT */
+     // Get resouce from URL and send to STDOUT
      curl_easy_setopt(connection->curlHandle, CURLOPT_URL, url.c_str());
 
      curlErr = curl_easy_perform(connection->curlHandle);
@@ -244,6 +299,9 @@ bool URLLoader::sendData(Connection *connection, const std::string &url, const s
              errorMsg->assign(kr_dbuffer_data(destBuf), kr_dbuffer_data(destBuf)+kr_dbuffer_size(destBuf));
          return false;
      }
+	 printf("%s\n", destBuf->data);
+	 printf("%zu\n", destBuf->capacity);
+	 printf("%zu\n", destBuf->size);*/
 
      return true;
 }

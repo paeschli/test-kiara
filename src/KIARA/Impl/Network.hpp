@@ -165,6 +165,8 @@ public:
     void dbgSimulateCall(const char *requestData);
 
     void performCall(Connection *connection, const DBuffer &requestData, DBuffer &responseData);
+	
+	void performCallZmq(const char *in_data, size_t in_size, DBuffer *response);
 
     KIARA::RuntimeEnvironment & getRuntimeEnvironment() const { return *runtimeEnvironment_; }
 
@@ -179,6 +181,7 @@ protected:
     DispatchMap dispatchMap_;
     KIARA_CreateRequestMessageFromData createRequestMessageFromData_;
     KIARA_CreateResponseMessage createResponseMessage_;
+	KIARA_CreateResponseMessageZmq createResponseMessageZmq_;
     KIARA_GetMessageMethodName getMessageMethodName_;
     KIARA_FreeMessage freeMessage_;
     KIARA_GetMessageData getMessageData_;
@@ -233,6 +236,11 @@ public:
     }
 
     ServiceHandler * findAcceptingServiceHandler(const Transport::TransportAddress::Ptr &address) const;
+	
+	void generateServerConfiguration(
+        ServerConfiguration &serverConfiguration,
+        const std::string &localHostName,
+        const std::string &remoteHostName);
 
 private:
 
@@ -262,11 +270,6 @@ private:
         const Transport::Connection::Ptr &connection,
         const Transport::TransportMessage &request,
         Transport::TransportMessage &response);
-
-    void generateServerConfiguration(
-        ServerConfiguration &serverConfiguration,
-        const std::string &localHostName,
-        const std::string &remoteHostName);
 
     Transport::Connection::Ptr createConnection(const HostAndPort &hostAndPort, const Transport::NetworkContext::Ptr& ctx);
 

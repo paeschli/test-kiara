@@ -71,6 +71,7 @@ std::string HttpAddress::getPath() const
 
 bool HttpAddress::acceptConnection(const TransportAddress::Ptr &address) const
 {
+	return true;
     if (!address || address->getTransport() != getTransport())
         return false;
     HttpAddress::Ptr other = boost::static_pointer_cast<HttpAddress>(address);

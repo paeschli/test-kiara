@@ -338,6 +338,23 @@ KIARA_Message * createResponseMessage(KIARA_Connection * KIARA_UNUSED conn, KIAR
     return msg;
 }
 
+KIARA_Message * createResponseMessageZmq(KIARA_Message * KIARA_UNUSED requestMsg)
+{
+    KIARA_PING();
+
+    KIARA_Message *msg = createNewMessage(ORTECDR_RESPONSE);
+
+    CDR_buffer_ensure_capacity_nocopy(&msg->codec, 1024);
+
+    writeMessageHeader(msg);
+
+    KIARA_IFDEBUG(dumpMessage(msg));
+
+    KIARA_DEBUGF("LEAVE createResponseMessage\n");
+
+    return msg;
+}
+
 void setGenericErrorMessage(KIARA_Message *msg, int errorCode, const char *errorMessage)
 {
     KIARA_PINGF("msg = %p, errorCode = %i, errorMessage = %s\n", msg, errorCode, errorMessage);

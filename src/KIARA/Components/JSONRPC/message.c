@@ -368,6 +368,26 @@ KIARA_Message * createResponseMessage(KIARA_Connection *conn, KIARA_Message *req
     return msg;
 }
 
+KIARA_Message * createResponseMessageZmq(KIARA_Message *requestMsg)
+{
+    KIARA_PING();
+
+    KIARA_Message *msg = createNewMessage();
+
+    json_t *body = msg->body = json_object();
+    json_object_set_new(body, "jsonrpc", json_string("2.0"));
+    if (requestMsg)
+        json_object_set(body, "id", json_object_get(requestMsg->body, "id"));
+    else
+        json_object_set_new(body, "id", json_null());
+
+    pushCursorNode(msg, msg->body);
+    json_object_set_new(msg->body, "result", json_null());
+    msg->cursor->fieldName = "result";
+
+    return msg;
+}
+
 void setGenericErrorMessage(KIARA_Message *msg, int errorCode, const char *errorMessage)
 {
     KIARA_PING();

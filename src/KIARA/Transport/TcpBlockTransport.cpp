@@ -6,6 +6,7 @@
  */
 
 #include "TcpBlockTransport.hpp"
+#include <iostream>
 #include <uriparser/Uri.h>
 #include <boost/system/error_code.hpp>
 #include <boost/lexical_cast.hpp>
@@ -61,41 +62,26 @@ static ::KIARA_Connection * kiara_getServiceConnection(::KIARA_ServiceFuncObj *f
 static KIARA_Result kiara_sendDataTcp(::KIARA_Connection *conn, const void *msgData, size_t msgDataSize, kr_dbuffer_t *destBuf)
 {
     KIARA_Result result = KIARA_SUCCESS;
-
+	printf("sending via TCP in extern C\n");
     KIARA::Impl::ClientConnection *cconn = ((KIARA::Impl::ClientConnection*)conn);
-    TcpBlockConnection::Ptr tcpConn =
-        boost::static_pointer_cast<TcpBlockConnection>(cconn->getTransportConnection());
+    TcpZmqConnection::Ptr zmqconnection = boost::static_pointer_cast<TcpZmqConnection>(cconn->getTransportConnection());
+	//printf("This is comming from connection open: %s\n", tcpConn->mydata.c_str());
+	
+	std::string payload;
+	payload.append((const char*)msgData);
+	
+	KT_Msg message;
+	message.set_payload ( payload );
 
-    KIARA::Transport::TcpBlockRequest req(tcpConn->getTransport());
+	zmqconnection->connection->send ( message, *zmqconnection->session, 0 );
 
-    req.getPayload().set(
-        const_cast<void*>(msgData),
-        msgDataSize,
-        msgDataSize,
-        KIARA::DBuffer::dont_free_tag());
+	KT_Msg reply;
+	zmqconnection->connection->recv ( *zmqconnection->session, reply, 0 );
 
-    boost::system::error_code ec;
-
-    if (!tcpConn->send(req, &ec))
-    {
-        KIARA::Impl::unwrap(conn)->setError(KIARA_GENERIC_ERROR, boost::lexical_cast<std::string>(ec));
-        result = KIARA_NETWORK_ERROR;
-    }
-    else
-    {
-        KIARA::Transport::TcpBlockResponse res(tcpConn->getTransport());
-
-        if (!tcpConn->receive(res, &ec))
-        {
-            KIARA::Impl::unwrap(conn)->setError(KIARA_GENERIC_ERROR, boost::lexical_cast<std::string>(ec));
-            result = KIARA_NETWORK_ERROR;
-        }
-
-        res.getPayload().swap(destBuf);
-
-        result = KIARA_SUCCESS;
-    }
-
+	std::vector<char> answer_vector = reply.get_payload();
+	std::string answer(answer_vector.begin(), answer_vector.end());
+	kr_dbuffer_append_mem(destBuf, (const void*) answer.c_str(), (size_t) answer.length());
+	
     return result;
 }
 
@@ -154,6 +140,7 @@ std::string TcpBlockAddress::getHostName() const
 
 bool TcpBlockAddress::acceptConnection(const TransportAddress::Ptr &address) const
 {
+	return true;
     if (!address || address->getTransport() != getTransport())
         return false;
     TcpBlockAddress::Ptr other = boost::static_pointer_cast<TcpBlockAddress>(address);
@@ -205,7 +192,32 @@ Connection::Ptr TcpBlockTransport::openConnection(
     UriParserStateA state;
     UriUriA parsedUri;
     state.uri = &parsedUri;
-    TcpBlockConnection::Ptr result;
+    Connection::Ptr result;
+	TcpZmqConnection *zmqconnection = new TcpZmqConnection;
+	
+	URL *kt_url = new URL(url, true);
+	
+	KT_Configuration config;
+	config.set_application_type ( KT_REQUESTREPLY );
+	config.set_transport_layer( KT_TCP );
+	config.set_hostname( kt_url->host );
+	config.set_port_number( atoi(kt_url->port.c_str()) );
+
+	KT_Connection* connection = new KT_Zeromq ();
+	connection->set_configuration (config);
+
+	KT_Session* session = nullptr;
+
+	if ( 0 != connection->connect ( &session ) )
+	{
+		std::cerr << "Failed to connect" << std::endl;
+	}
+	
+	zmqconnection->connection = connection;
+	zmqconnection->session = session;
+	
+	return TcpZmqConnection::Ptr(zmqconnection);
+	//TcpBlockConnection *result;
 
     if (uriParseUriA(&state, url.c_str()) != URI_SUCCESS)
     {
@@ -224,9 +236,12 @@ Connection::Ptr TcpBlockTransport::openConnection(
         }
         else
         {
+			
+			printf("before TcpBlockConnection\n");
             result.reset(new TcpBlockConnection(ctx, this));
-
-            if (parsedUri.hostText.first)
+			printf("after TcpBlockConnection\n");
+			//result->host.append("lets see if its still there.");
+            /*if (parsedUri.hostText.first)
             {
                 std::string hostName(parsedUri.hostText.first, parsedUri.hostText.afterLast);
                 std::string port(parsedUri.portText.first, parsedUri.portText.afterLast);
@@ -239,7 +254,7 @@ Connection::Ptr TcpBlockTransport::openConnection(
                     if (errorCode)
                         *errorCode = ec;
                 }
-            }
+            }*/
         }
     }
     uriFreeUriMembersA(&parsedUri);
@@ -284,6 +299,7 @@ TcpBlockConnection::~TcpBlockConnection()
 
 bool TcpBlockConnection::open(const std::string &address, const std::string &port, boost::system::error_code *errorCode)
 {
+	printf("Using the cpp TCP open\n");
     boost::asio::ip::tcp::resolver resolver(getSocket().get_io_service());
     boost::asio::ip::tcp::resolver::query query(address, port);
     boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
@@ -306,6 +322,7 @@ bool TcpBlockConnection::open(const std::string &address, const std::string &por
 
 bool TcpBlockConnection::send(const Request &request, boost::system::error_code *errorCode)
 {
+	printf("Using the cpp TCP send\n");
     DFC_IFDEBUG(kr_dump_data("TcpBlockClientConnection::send: ", stderr, (unsigned char *)request.getPayload().data(), request.getPayloadSize(), 0));
 
     char blockSizeData[4];

@@ -66,14 +66,18 @@ kiara.sources.extend(env.Glob("KIARA/Utils/*.cpp"))
 kiara.sources.extend(env.Glob("KIARA/IDL/*.cpp"))
 kiara.sources.extend(env.Glob("KIARA/Server/*.cpp"))
 kiara.sources.extend(env.Glob("KIARA/Transport/*.cpp"))
+kiara.sources.extend(env.Glob("KIARA/Transport/*.c"))
 kiara.sources.extend(env.Glob("KIARA/Impl/*.cpp"))
 kiara.sources.extend(env.Glob("KIARA/Impl/*.c"))
 kiara.libs = env.Split('DFC boost_filesystem boost_thread ssl  curl  ') # crypto ldap lber
 kiara.ccflags = env.Split('$CCFLAGS')
 
+
 ccwarnflags = []
 if isGCC:
     ccwarnflags.extend(env.Split('-Wno-unused-local-typedefs'))
+    kiara.ccflags.extend(ccwarnflags)
+    ccwarnflags.extend(env.Split('-std=c++11'))
     kiara.ccflags.extend(ccwarnflags)
 
 # LLVM Configuration
@@ -232,6 +236,8 @@ if HAVE_LLVM:
 # Build 3rd party libraries
 third_party_libs = SConscript('third_party/SConscript')
 kiara.libs.append('curl')
+kiara.libs.append('zmq')
+kiara.libs.append('czmq')
 kiara.libs.append('jansson_static')
 kiara.libs.append('uriparser_static')
 kiara.libs.append('http_parser_static')

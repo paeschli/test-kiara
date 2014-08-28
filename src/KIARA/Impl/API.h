@@ -17,6 +17,7 @@ typedef int (*KIARA_InitNetworkFunc)(KIARA_Connection *);
 typedef int (*KIARA_FinalizeNetworkFunc)(KIARA_Connection *);
 typedef KIARA_Message * (*KIARA_CreateRequestMessageFromData)(const void *data, size_t dataSize);
 typedef KIARA_Message * (*KIARA_CreateResponseMessage)(KIARA_Connection *conn, KIARA_Message *requestMsg);
+typedef KIARA_Message * (*KIARA_CreateResponseMessageZmq)(KIARA_Message *requestMsg);
 typedef const char * (*KIARA_GetMessageMethodName)(KIARA_Message *msg);
 typedef void (*KIARA_FreeMessage)(KIARA_Message *msg);
 typedef KIARA_Result (*KIARA_GetMessageData)(KIARA_Message *msg, kr_dbuffer_t *dest);

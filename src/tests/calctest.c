@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        url = "http://localhost:8080/service";
+        url = "http://localhost:9090/service";
     }
 
     kiaraLoadLLVMModule(ctx, "calctest_data_access.bc");

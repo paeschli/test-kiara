@@ -11,6 +11,7 @@
 #include <KIARA/Common/stdint.h>
 #include <KIARA/Utils/DBuffer.hpp>
 #include "Transport.hpp"
+#include "KT_Zeromq.hpp"
 #include <boost/asio/ip/address.hpp>
 
 namespace KIARA
@@ -70,6 +71,31 @@ public:
 
 };
 
+class TcpZmqConnection: public Connection
+{
+public:
+
+    typedef boost::shared_ptr<TcpZmqConnection> Ptr;
+
+    explicit TcpZmqConnection() { }
+
+    ~TcpZmqConnection() { }
+
+    virtual void handleStart() { }
+
+    std::string getRemoteHostName() const { return ""; }
+
+    unsigned short getRemotePort() const { return 0; }
+
+    std::string getLocalHostName() const { return ""; }
+
+    unsigned short getLocalPort() const { return 0; }
+	
+	KT_Connection* connection;
+	
+	KT_Session* session;
+};
+
 class TcpBlockConnection;
 typedef boost::shared_ptr<TcpBlockConnection> TcpBlockConnectionPtr;
 
@@ -86,6 +112,8 @@ public:
     typedef TcpBlockResponse Response;
 
     explicit TcpBlockConnection(const NetworkContext::Ptr& ctx, const Transport *transport);
+	
+	/*explicit TcpBlockConnection(const NetworkContext::Ptr& ctx, char *transport, char *supper);*/
 
     virtual ~TcpBlockConnection();
 
@@ -99,6 +127,8 @@ public:
 
     /// Start the first asynchronous operation for the connection.
     void handleStart();
+	
+	std::string host;
 
 private:
 

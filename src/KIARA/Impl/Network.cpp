@@ -33,6 +33,13 @@
 #include <KIARA/Transport/TcpBlockTransport.hpp>
 #include <KIARA/CDT/kr_dumpdata.h>
 #include <uriparser/Uri.h>
+#include <iostream>
+#include <iomanip>
+#include <unistd.h>
+#include "../Transport/KT_Zeromq.hpp"
+#include "../Transport/KT_HTTP_Parser.hpp"
+#include "../Transport/KT_HTTP_Responder.hpp"
+#include "../Transport/KT_Msg.hpp"
 
 #define DFC_DO_DEBUG
 #include <DFC/Utils/Debug.hpp>
@@ -43,7 +50,9 @@ namespace KIARA
 
 namespace Impl
 {
-
+	
+void callback_handler ( KIARA::Transport::KT_Msg&, KIARA::Transport::KT_Session*, KIARA::Transport::KT_Connection* );
+	
 /// Connection
 
 Connection::Connection(Context *context, const std::string &transportName)
@@ -115,17 +124,55 @@ ClientConnection::ClientConnection(Context *context, const std::string &uri)
     // bool result = KIARA::URLLoader::load(uri, serverConfigText);
 
     // FIXME here a global security configuration is used, which is setup when node is started
-    bool result = KIARA::URLLoader::load(urlLoaderConnection_, uri, serverConfigText, context->getSecurityConfiguraton());
+    //bool result = KIARA::URLLoader::load(urlLoaderConnection_, uri, serverConfigText, context->getSecurityConfiguraton());
+	URL *kt_url = new URL(uri, true);
+	
+	KIARA::Transport::KT_Configuration config;
+	config.set_application_type ( KT_STREAM );
 
-    if (!result)
+	config.set_host( KT_TCP, kt_url->host, atoi(kt_url->port.c_str()));
+
+	KIARA::Transport::KT_Connection* connection = new KIARA::Transport::KT_Zeromq ();
+	connection->set_configuration (config);
+
+	KIARA::Transport::KT_Session* session = nullptr;
+	
+	if ( 0 != connection->connect(&session) )
+	{
+		std::cerr << "Failed to connect" << std::endl;
+	}
+
+	if (nullptr == session)
+	{
+		std::cerr << "Session object was not set" << std::endl;
+	}
+
+	KIARA::Transport::KT_Msg request;
+	std::string payload ( "GET /service HTTP/1.1\r\nUser-Agent: KIARA\r\nHost: localhost:5555\r\n\r\n" );
+
+	request.set_payload(payload);
+
+	if (0 != connection->send(request, *session, 0))
+	{
+		std::cerr << "Failed to send payload" << std::endl;
+	}
+	
+	KIARA::Transport::KT_Msg reply;
+	if (0 != connection->recv(*session, reply, 0))
+		std::cerr << "Receive failed" << std::endl;
+
+	KIARA::Transport::KT_HTTP_Parser parser (reply);
+	
+    /*if (!parser)
     {
         KIARA::URLLoader::deleteConnection(urlLoaderConnection_);
         urlLoaderConnection_ = 0;
         setError(KIARA_CONNECTION_ERROR, "Could not load server configuration");
         return;
-    }
+    }*/
     KIARA::ServerConfiguration serverConfig;
-    if (!serverConfig.fromJSON(serverConfigText))
+	
+    if (!serverConfig.fromJSON(parser.get_payload()))
     {
         KIARA::URLLoader::deleteConnection(urlLoaderConnection_);
         urlLoaderConnection_ = 0;
@@ -397,7 +444,7 @@ Server::~Server()
 bool Server::addPortListener(const std::string &host, unsigned int port, const std::string &transportName)
 {
     DFC_DEBUG("Server::addPortListener: "<<host<<":"<<port<<" "<<transportName);
-
+	
     HostAndPort hostAndPort(host, port);
     TransportEntryList::iterator it = transportEntries_.find(hostAndPort);
     if (it != transportEntries_.end())
@@ -416,9 +463,106 @@ bool Server::addPortListener(const std::string &host, unsigned int port, const s
 
     TransportEntry::Ptr tentry(new TransportEntry(transport));
     transportEntries_[hostAndPort] = tentry;
-    listen(host, boost::lexical_cast<std::string>(port),
-           boost::bind(&Server::createConnection, this, hostAndPort, _1));
-    return true;
+    /*listen(host, boost::lexical_cast<std::string>(port),
+           boost::bind(&Server::createConnection, this, hostAndPort, _1));*/
+	
+	//ZMQ implementation
+	std::cout << "Server::addPortListener: "<<host<<":"<<port<<" "<<transportName << std::endl;
+	KIARA::Transport::KT_Configuration config;
+	if(!transportName.compare("http")) {
+		config.set_application_type ( KT_STREAM );
+	}
+	if(!transportName.compare("tcp")) {
+		config.set_application_type ( KT_REQUESTREPLY );
+	}
+	config.set_transport_layer( KT_TCP );
+	config.set_hostname( host );
+	config.set_port_number( port );
+	config.set_config_path(configPath_);
+
+	KIARA::Transport::KT_Connection* connection = new KIARA::Transport::KT_Zeromq ();
+	connection->set_configuration (config);
+
+	connection->register_callback( &callback_handler );
+	connection->bind();
+	
+	connection->get_session()->begin()->second->set_k_user_data(this);
+	//End ZMQ implementation
+	return true;
+}
+
+void callback_handler ( KIARA::Transport::KT_Msg& msg, KIARA::Transport::KT_Session* sess, KIARA::Transport::KT_Connection* connection ) {
+	
+	std::string payload = "";
+	std::string res = "";
+	
+	Server *server = (Server*) sess->get_k_user_data();
+	
+	if(connection->get_configuration().get_application_type() == KT_STREAM) {
+		std::cout << "HTTP request handling" << std::endl;
+		KIARA::Transport::KT_HTTP_Parser parser (msg);
+		
+		if(parser.get_url().compare( 0, connection->get_configuration().get_config_path().length(), connection->get_configuration().get_config_path()) == 0)
+		{
+			KIARA::ServerConfiguration serverConfiguration;
+			server->generateServerConfiguration(serverConfiguration, connection->get_configuration().get_hostname(), "");
+			std::string config = serverConfiguration.toJSON();
+			payload = KIARA::Transport::KT_HTTP_Responder::generate_200_OK( std::vector<char> (config.begin(), config.end() ) );
+		}
+		else 
+		{
+			KIARA::Transport::HttpTransport *myTransport = new KIARA::Transport::HttpTransport();
+			Transport::HttpAddress::Ptr addr(
+				new Transport::HttpAddress(
+					connection->get_configuration().get_hostname(),
+					connection->get_configuration().get_port_number(),
+					parser.get_url().substr( 0, strlen(parser.get_url().c_str()) ),
+					myTransport
+				)
+			);
+			if (ServiceHandler *serviceHandler = server->findAcceptingServiceHandler(addr))
+			{
+				DBuffer *response = new DBuffer();
+				serviceHandler->performCallZmq(parser.get_payload().c_str(), strlen(parser.get_payload().c_str()), response);
+				res.append(response->data());
+
+				std::string res_final;
+				res_final = res.substr(0, response->size());
+
+				payload = KIARA::Transport::KT_HTTP_Responder::generate_200_OK( std::vector<char> (res_final.begin(), res_final.end() ) );
+			}
+		}
+	}
+	if(connection->get_configuration().get_application_type() == KT_REQUESTREPLY) {
+		std::cout << "TCP request handling" << std::endl;
+		std::vector<char> answer_vector = msg.get_payload();
+		std::string answer(answer_vector.begin(), answer_vector.end());
+		
+		KIARA::Transport::TcpBlockTransport *myTransport = new KIARA::Transport::TcpBlockTransport();
+		Transport::TcpBlockAddress::Ptr addr(
+			new Transport::TcpBlockAddress(
+				connection->get_configuration().get_hostname(),
+				connection->get_configuration().get_port_number(),
+				myTransport
+			)
+		);
+		
+		if (ServiceHandler *serviceHandler = server->findAcceptingServiceHandler(addr))
+		{
+			DBuffer *response = new DBuffer();
+			serviceHandler->performCallZmq(answer.c_str(), answer.length(), response);
+			res.append(response->data());
+			
+			std::string res_final;
+			res_final = res.substr(0, response->size());
+			payload = res_final;
+		}
+	}
+
+	KIARA::Transport::KT_Msg message;
+	message.set_payload ( payload );
+	
+	connection->send ( message, (*sess), 0 );
 }
 
 Transport::RequestResult Server::handleRequest(
@@ -457,7 +601,7 @@ Transport::RequestResult Server::handleRequest(
             res.setTextResponse(serverConfiguration.toJSON(), "application/json");
             return Transport::SEND_RESPONSE;
         }
-
+		
         Transport::HttpAddress::Ptr addr(
             new Transport::HttpAddress(connection->getLocalHostName(), connection->getLocalPort(), requestPath, request.getTransport()));
 
@@ -735,6 +879,10 @@ ServiceHandler::ServiceHandler(Service *service, const Transport::Transport *tra
     createResponseMessage_ =
         (KIARA_CreateResponseMessage)(intptr_t)
         getRuntimeEnvironment().requestPointerToFunction("createResponseMessage");
+	
+	createResponseMessageZmq_ =
+        (KIARA_CreateResponseMessageZmq)(intptr_t)
+        getRuntimeEnvironment().requestPointerToFunction("createResponseMessageZmq");
 
     getMessageMethodName_ =
         (KIARA_GetMessageMethodName)(intptr_t)
@@ -855,6 +1003,58 @@ void ServiceHandler::dbgSimulateCall(const char *requestData)
     freeMessage_(inMsg);
 }
 
+void ServiceHandler::performCallZmq(const char *in_data, size_t in_size, DBuffer *response)
+{
+	KIARA_Message *inMsg = createRequestMessageFromData_(in_data, in_size);
+	std::cout << in_size << std::endl;
+	if (!inMsg)
+    {
+
+        KIARA_Message *outMsg = createResponseMessageZmq_(0);
+        setGenericErrorMessage_(outMsg, KIARA_FAILURE, "Invalid request data");
+        //getMessageData_(outMsg, responseData.get_dbuffer());
+        freeMessage_(outMsg);
+    }
+    else
+    {
+
+        const char *methodName = getMessageMethodName_(inMsg);
+
+        DispatchMap::iterator it = dispatchMap_.find(methodName);
+
+        if (it == dispatchMap_.end())
+        {
+            KIARA_Message *outMsg = createResponseMessageZmq_(0);
+            std::string errorStr = "No such method: " + std::string(methodName);
+            setGenericErrorMessage_(outMsg, KIARA_FAILURE, errorStr.c_str());
+            getMessageData_(outMsg, response->get_dbuffer());
+            freeMessage_(outMsg);
+            return;
+        }
+
+        KIARA_Message *outMsg = createResponseMessageZmq_(inMsg);
+        /** FIXME Temporary solution */
+        KIARA_ServiceFuncObj funcObj;
+        memcpy(&funcObj, it->second, sizeof(KIARA_ServiceFuncObj));
+        //funcObj.base.connection = wrap((void*));
+		
+        KIARA_Result result = funcObj.base.syncHandler(&funcObj, outMsg, inMsg);
+
+        if (result == KIARA_SUCCESS || result == KIARA_EXCEPTION)
+        {
+            getMessageData_(outMsg, response->get_dbuffer());
+        }
+        else
+        {
+            setGenericErrorMessage_(outMsg, result, kiaraGetErrorName(result));
+            getMessageData_(outMsg, response->get_dbuffer());
+        }
+
+        freeMessage_(outMsg);
+        freeMessage_(inMsg);
+    }
+}
+
 void ServiceHandler::performCall(Connection *connection, const DBuffer &requestData, DBuffer &responseData)
 {
     KIARA_Message *inMsg = createRequestMessageFromData_(requestData.data(), requestData.size());
@@ -892,6 +1092,7 @@ void ServiceHandler::performCall(Connection *connection, const DBuffer &requestD
         if (result == KIARA_SUCCESS || result == KIARA_EXCEPTION)
         {
             getMessageData_(outMsg, responseData.get_dbuffer());
+			std::cout << responseData.data() << std::endl;
         }
         else
         {
