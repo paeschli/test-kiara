@@ -34,6 +34,7 @@
 #include "KT_Connection.hpp"
 #include "KT_Msg.hpp"
 #include "KT_Session.hpp"
+#include "zmq.hpp"
 
 namespace KIARA {
 namespace Transport {
@@ -49,6 +50,8 @@ class KT_Zeromq : public KT_Connection
 private:
     /// Thread used for polling. Requires C++11 with std::thread support
 	std::thread* poller_thread;
+	std::thread* worker_thread;
+	std::thread* proxy_thread;
     /// Indicates if the poller thread has to terminate, it' not acting as signal.
 	bool interupted;
 	void poller(void* socket, std::string endpoint);
@@ -80,6 +83,15 @@ public:
 
   int
   register_callback(std::function<void(KT_Msg&, KT_Session*, KT_Connection*)>);
+  
+  int
+  register_callback_str(std::function<std::string(KT_Msg&, KT_Session*, KT_Connection*)>);
+  
+  void
+  worker(void *arg, std::string endpoint);
+  
+  void
+  proxy(KT_Session* session, std::string binding_name);
 
   int bind(void);
 

@@ -59,6 +59,7 @@ typedef unsigned int kt_application_type;
 #define KT_STREAM           3
 #define KT_ROUNDROBIN       4
 #define KT_REQUESTREPLY     5
+#define KT_REQUESTREPLYMT   6
 
 #ifdef __cplusplus
 }

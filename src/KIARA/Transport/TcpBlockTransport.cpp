@@ -62,7 +62,7 @@ static ::KIARA_Connection * kiara_getServiceConnection(::KIARA_ServiceFuncObj *f
 static KIARA_Result kiara_sendDataTcp(::KIARA_Connection *conn, const void *msgData, size_t msgDataSize, kr_dbuffer_t *destBuf)
 {
     KIARA_Result result = KIARA_SUCCESS;
-	printf("sending via TCP in extern C\n");
+	//printf("sending via TCP in extern C\n");
     KIARA::Impl::ClientConnection *cconn = ((KIARA::Impl::ClientConnection*)conn);
     TcpZmqConnection::Ptr zmqconnection = boost::static_pointer_cast<TcpZmqConnection>(cconn->getTransportConnection());
 	//printf("This is comming from connection open: %s\n", tcpConn->mydata.c_str());
@@ -237,9 +237,9 @@ Connection::Ptr TcpBlockTransport::openConnection(
         else
         {
 			
-			printf("before TcpBlockConnection\n");
+			//printf("before TcpBlockConnection\n");
             result.reset(new TcpBlockConnection(ctx, this));
-			printf("after TcpBlockConnection\n");
+			//printf("after TcpBlockConnection\n");
 			//result->host.append("lets see if its still there.");
             /*if (parsedUri.hostText.first)
             {
@@ -299,7 +299,7 @@ TcpBlockConnection::~TcpBlockConnection()
 
 bool TcpBlockConnection::open(const std::string &address, const std::string &port, boost::system::error_code *errorCode)
 {
-	printf("Using the cpp TCP open\n");
+	//printf("Using the cpp TCP open\n");
     boost::asio::ip::tcp::resolver resolver(getSocket().get_io_service());
     boost::asio::ip::tcp::resolver::query query(address, port);
     boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
@@ -322,7 +322,7 @@ bool TcpBlockConnection::open(const std::string &address, const std::string &por
 
 bool TcpBlockConnection::send(const Request &request, boost::system::error_code *errorCode)
 {
-	printf("Using the cpp TCP send\n");
+	//printf("Using the cpp TCP send\n");
     DFC_IFDEBUG(kr_dump_data("TcpBlockClientConnection::send: ", stderr, (unsigned char *)request.getPayload().data(), request.getPayloadSize(), 0));
 
     char blockSizeData[4];

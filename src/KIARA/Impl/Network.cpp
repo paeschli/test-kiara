@@ -52,6 +52,8 @@ namespace Impl
 {
 	
 void callback_handler ( KIARA::Transport::KT_Msg&, KIARA::Transport::KT_Session*, KIARA::Transport::KT_Connection* );
+
+std::string callback_handler_mt ( KIARA::Transport::KT_Msg&, KIARA::Transport::KT_Session*, KIARA::Transport::KT_Connection* );
 	
 /// Connection
 
@@ -470,10 +472,12 @@ bool Server::addPortListener(const std::string &host, unsigned int port, const s
 	std::cout << "Server::addPortListener: "<<host<<":"<<port<<" "<<transportName << std::endl;
 	KIARA::Transport::KT_Configuration config;
 	if(!transportName.compare("http")) {
+		std::cout << "Add HTTP listner" << std::endl;
 		config.set_application_type ( KT_STREAM );
 	}
 	if(!transportName.compare("tcp")) {
-		config.set_application_type ( KT_REQUESTREPLY );
+		std::cout << "Add TCP listner" << std::endl;
+		config.set_application_type ( KT_REQUESTREPLYMT );
 	}
 	config.set_transport_layer( KT_TCP );
 	config.set_hostname( host );
@@ -483,12 +487,52 @@ bool Server::addPortListener(const std::string &host, unsigned int port, const s
 	KIARA::Transport::KT_Connection* connection = new KIARA::Transport::KT_Zeromq ();
 	connection->set_configuration (config);
 
-	connection->register_callback( &callback_handler );
+	if(!transportName.compare("tcp")) {
+		connection->register_callback_str( &callback_handler_mt );
+	}
+	else {
+		connection->register_callback( &callback_handler );
+	}
+	//connection->register_callback( &callback_handler );
 	connection->bind();
 	
 	connection->get_session()->begin()->second->set_k_user_data(this);
 	//End ZMQ implementation
 	return true;
+}
+
+std::string callback_handler_mt ( KIARA::Transport::KT_Msg& msg, KIARA::Transport::KT_Session* sess, KIARA::Transport::KT_Connection* connection ) {
+	std::string payload = "";
+	std::string res = "";
+	
+	Server *server = (Server*) sess->get_k_user_data();
+	
+	if(connection->get_configuration().get_application_type() == KT_REQUESTREPLYMT) {
+		std::vector<char> answer_vector = msg.get_payload();
+		std::string answer(answer_vector.begin(), answer_vector.end());
+		
+		KIARA::Transport::TcpBlockTransport *myTransport = new KIARA::Transport::TcpBlockTransport();
+		Transport::TcpBlockAddress::Ptr addr(
+			new Transport::TcpBlockAddress(
+				connection->get_configuration().get_hostname(),
+				connection->get_configuration().get_port_number(),
+				myTransport
+			)
+		);
+		
+		if (ServiceHandler *serviceHandler = server->findAcceptingServiceHandler(addr))
+		{
+			DBuffer *response = new DBuffer();
+			serviceHandler->performCallZmq(answer.c_str(), answer.length(), response);
+			res.append(response->data());
+			
+			std::string res_final;
+			res_final = res.substr(0, response->size());
+			payload = res_final;
+		}
+	}
+	
+	return payload;
 }
 
 void callback_handler ( KIARA::Transport::KT_Msg& msg, KIARA::Transport::KT_Session* sess, KIARA::Transport::KT_Connection* connection ) {
@@ -1006,7 +1050,6 @@ void ServiceHandler::dbgSimulateCall(const char *requestData)
 void ServiceHandler::performCallZmq(const char *in_data, size_t in_size, DBuffer *response)
 {
 	KIARA_Message *inMsg = createRequestMessageFromData_(in_data, in_size);
-	std::cout << in_size << std::endl;
 	if (!inMsg)
     {
 

@@ -6,6 +6,7 @@ namespace Transport {
 
 KT_Zeromq::KT_Zeromq() {
     _context = zmq_ctx_new();
+	zmq::context_t _context_mt(1);
 }
 
 KT_Zeromq::~KT_Zeromq() {
@@ -62,6 +63,10 @@ void* KT_Zeromq::create_socket(unsigned int socket_type, bool listener) {
             }
             errcode = errno;
             break;
+		case KT_REQUESTREPLYMT:
+			socket = zmq_socket(_context, ZMQ_STREAM);
+            errcode = errno;
+			break;
         default:
             break;
     }
@@ -257,6 +262,12 @@ KT_Zeromq::register_callback(std::function<void(KT_Msg&, KT_Session*, KT_Connect
     return 0;
 }
 
+int
+KT_Zeromq::register_callback_str(std::function<std::string(KT_Msg&, KT_Session*, KT_Connection*) > callback) {
+    _std_callback_str = callback;
+    return 0;
+}
+
 /**
  * @brief Bind according to the configuration and listen to incoming messages.
  * @return Zero on success, non-zero on failure.
@@ -294,22 +305,30 @@ KT_Zeromq::bind(void) {
     binding_name->append(config.get_hostname());
     binding_name->append(":");
     binding_name->append(std::to_string(config.get_port_number()));
-
+	
+	KT_Session* session = new KT_Session();
     // Actually bind the socket.
-    int rc = zmq_bind(socket, binding_name->c_str());
-    errcode = errno;
-    if (0 != rc) {
-        errno = errcode;
-        return -1;
-    }
+	if(_configuration.get_application_type() == KT_REQUESTREPLYMT){
+		proxy_thread = new std::thread(&KT_Zeromq::proxy, this, session, binding_name->c_str());
+		return 0;
+	}
+	else {
+		int rc = zmq_bind(socket, binding_name->c_str());
+		errcode = errno;
+		if (0 != rc) {
+			errno = errcode;
+			return -1;
+		}
+		session->set_socket(socket);
+	}
 
     // Create a new session and store it as a member
-    KT_Session* session = new KT_Session();
-    session->set_socket(socket);
+    
+    
     session->set_endpoint(binding_name->c_str());
     _sessions->insert(std::make_pair(binding_name->c_str(), session));
 
-    // Except if it's Publish/Subscribe start a poller thread listening for
+    // Except if it's Publish/Subscribe start a poller thread listening forf
     // incoming messages which are later dispatched to the callback function.
     // Be advised that this code does not check for race-conditions or other
     // multi-threading specific problems. In short: This code is not thread-safe!
@@ -318,6 +337,50 @@ KT_Zeromq::bind(void) {
         poller_thread = new std::thread(&KT_Zeromq::poller, this, socket, binding_name->c_str());
     }
     return 0;
+}
+
+void
+KT_Zeromq::proxy(KT_Session* session, std::string binding_name) {
+	zmq::socket_t clients (_context_mt, ZMQ_ROUTER);
+	clients.bind (binding_name.c_str());
+	session->set_socket(clients);
+	zmq::socket_t workers(_context_mt, ZMQ_DEALER);
+	workers.bind ("inproc://workers");
+	
+	for (int thread_nbr = 0; thread_nbr != 5; thread_nbr++) {
+		worker_thread = new std::thread(&KT_Zeromq::worker, this, (void *) &_context_mt, binding_name);
+		std::cout << "Adding Thread " << worker_thread->get_id() << std::endl;
+	}
+	zmq::proxy (clients, workers, NULL);
+}
+
+void
+KT_Zeromq::worker(void *arg, std::string endpoint){
+	zmq::context_t *context = (zmq::context_t *) arg;
+	zmq::socket_t socket (*context, ZMQ_REP);
+	socket.connect ("inproc://workers");
+	while (true) {
+        //  Wait for next request from client
+        zmq::message_t request;
+        socket.recv (&request);
+		
+		char* msg_ptr = (char*) request.data();
+		
+		std::vector<char> buffer;
+		buffer = std::vector<char>(msg_ptr, msg_ptr + request.size());
+		
+		KT_Msg* ret = new KT_Msg;
+
+		ret->set_payload(buffer);
+		KT_Session* sess = _sessions->find(endpoint)->second;
+		//call kiara
+		std::string resp = _std_callback_str(*ret, sess, this);
+		//std::cout << std::this_thread::get_id() << std::endl;
+        //  Send reply back to client
+        zmq::message_t reply(resp.length());
+        memcpy ((void *) reply.data (), (char *)resp.c_str(), resp.length());
+        socket.send (reply);
+    }
 }
 
 /**
