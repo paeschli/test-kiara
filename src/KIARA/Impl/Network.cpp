@@ -487,7 +487,7 @@ bool Server::addPortListener(const std::string &host, unsigned int port, const s
 	KIARA::Transport::KT_Connection* connection = new KIARA::Transport::KT_Zeromq ();
 	connection->set_configuration (config);
 
-	if(!transportName.compare("tcp")) {
+	if(connection->get_configuration().get_application_type() == KT_REQUESTREPLYMT) {
 		connection->register_callback_str( &callback_handler_mt );
 	}
 	else {

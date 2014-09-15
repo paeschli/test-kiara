@@ -310,6 +310,8 @@ KT_Zeromq::bind(void) {
     // Actually bind the socket.
 	if(_configuration.get_application_type() == KT_REQUESTREPLYMT){
 		proxy_thread = new std::thread(&KT_Zeromq::proxy, this, session, binding_name->c_str());
+		session->set_endpoint(binding_name->c_str());
+		_sessions->insert(std::make_pair(binding_name->c_str(), session));
 		return 0;
 	}
 	else {
