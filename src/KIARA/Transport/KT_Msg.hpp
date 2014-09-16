@@ -34,6 +34,9 @@ class KT_Msg
 private:
 	std::map< std::string, std::string > _metadata;
 	std::vector< char > _payload;
+	const void *_payload_binary;
+	size_t _payload_size;
+	int _binary_transport = 0;
 
 public:
 	KT_Msg();
@@ -74,7 +77,19 @@ public:
 		_payload.resize (payload.size());
 		_payload.assign (payload.begin(), payload.end());
 	}
-
+	void set_payload(const void *payload) {
+		_payload_binary = payload;
+		_binary_transport = 1;
+	}
+	void set_size(size_t payload_size) {
+		_payload_size = payload_size;
+	}
+	size_t get_size() {
+		return _payload_size;
+	}
+	int is_binary_transport() {
+		return _binary_transport;
+	}
 	/**
 	 * @brief Get the value of _payload.
 	 * @return The value of _payload.
@@ -83,7 +98,9 @@ public:
 	std::vector<char> get_payload() {
 		return _payload;
 	}
-
+	const void* get_payload_binary() {
+		return _payload_binary;
+	}
     /**
      * @brief Get the pointer to the payload.
      * @return std::vector<char> pointer to the payload.

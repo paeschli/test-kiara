@@ -247,10 +247,10 @@ int main(int argc, char **argv)
      * Create new server and register service
      */
 
-    server = kiaraNewServer(ctx, "0.0.0.0", atoi(port), "/service");
+    server = kiaraNewServer(ctx, "192.168.56.101", atoi(port), "/service");
 
     //result = kiaraAddService(server, "/rpc/benchmark", protocol, service);
-    result = kiaraAddService(server, "tcp://0.0.0.0:53212", protocol, service);
+    result = kiaraAddService(server, "tcp://192.168.56.101:53212", protocol, service);
     if (result != KIARA_SUCCESS)
         fprintf(stderr, "Error: could not add service: %s: %s\n",
                 kiaraGetErrorName(result), kiaraGetServerError(server));

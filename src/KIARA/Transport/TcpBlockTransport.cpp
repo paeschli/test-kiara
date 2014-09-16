@@ -62,25 +62,23 @@ static ::KIARA_Connection * kiara_getServiceConnection(::KIARA_ServiceFuncObj *f
 static KIARA_Result kiara_sendDataTcp(::KIARA_Connection *conn, const void *msgData, size_t msgDataSize, kr_dbuffer_t *destBuf)
 {
     KIARA_Result result = KIARA_SUCCESS;
-	//printf("sending via TCP in extern C\n");
+	
     KIARA::Impl::ClientConnection *cconn = ((KIARA::Impl::ClientConnection*)conn);
     TcpZmqConnection::Ptr zmqconnection = boost::static_pointer_cast<TcpZmqConnection>(cconn->getTransportConnection());
-	//printf("This is comming from connection open: %s\n", tcpConn->mydata.c_str());
-	
-	std::string payload;
-	payload.append((const char*)msgData);
 	
 	KT_Msg message;
-	message.set_payload ( payload );
-
+	
+	message.set_payload ( msgData );
+	message.set_size( msgDataSize );
+	
 	zmqconnection->connection->send ( message, *zmqconnection->session, 0 );
-
+	
 	KT_Msg reply;
 	zmqconnection->connection->recv ( *zmqconnection->session, reply, 0 );
-
-	std::vector<char> answer_vector = reply.get_payload();
-	std::string answer(answer_vector.begin(), answer_vector.end());
-	kr_dbuffer_append_mem(destBuf, (const void*) answer.c_str(), (size_t) answer.length());
+	
+	std::cout << (char*)reply.get_payload_binary() << std::endl;
+	
+	kr_dbuffer_append_mem(destBuf, reply.get_payload_binary(), reply.get_size());
 	
     return result;
 }

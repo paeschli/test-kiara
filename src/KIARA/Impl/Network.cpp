@@ -53,7 +53,7 @@ namespace Impl
 	
 void callback_handler ( KIARA::Transport::KT_Msg&, KIARA::Transport::KT_Session*, KIARA::Transport::KT_Connection* );
 
-std::string callback_handler_mt ( KIARA::Transport::KT_Msg&, KIARA::Transport::KT_Session*, KIARA::Transport::KT_Connection* );
+DBuffer* callback_handler_mt ( KIARA::Transport::KT_Msg&, KIARA::Transport::KT_Session*, KIARA::Transport::KT_Connection* );
 	
 /// Connection
 
@@ -469,14 +469,14 @@ bool Server::addPortListener(const std::string &host, unsigned int port, const s
            boost::bind(&Server::createConnection, this, hostAndPort, _1));*/
 	
 	//ZMQ implementation
-	std::cout << "Server::addPortListener: "<<host<<":"<<port<<" "<<transportName << std::endl;
+	
 	KIARA::Transport::KT_Configuration config;
 	if(!transportName.compare("http")) {
-		std::cout << "Add HTTP listner" << std::endl;
+		std::cout << "Server::addPortListener HTTP: "<<host<<":"<<port<<" "<<transportName << std::endl;
 		config.set_application_type ( KT_STREAM );
 	}
 	if(!transportName.compare("tcp")) {
-		std::cout << "Add TCP listner" << std::endl;
+		std::cout << "Server::addPortListener TCP: "<<host<<":"<<port<<" "<<transportName << std::endl;
 		config.set_application_type ( KT_REQUESTREPLYMT );
 	}
 	config.set_transport_layer( KT_TCP );
@@ -501,9 +501,10 @@ bool Server::addPortListener(const std::string &host, unsigned int port, const s
 	return true;
 }
 
-std::string callback_handler_mt ( KIARA::Transport::KT_Msg& msg, KIARA::Transport::KT_Session* sess, KIARA::Transport::KT_Connection* connection ) {
+DBuffer* callback_handler_mt ( KIARA::Transport::KT_Msg& msg, KIARA::Transport::KT_Session* sess, KIARA::Transport::KT_Connection* connection ) {
 	std::string payload = "";
 	std::string res = "";
+	DBuffer *response = new DBuffer();
 	
 	Server *server = (Server*) sess->get_k_user_data();
 	
@@ -522,8 +523,8 @@ std::string callback_handler_mt ( KIARA::Transport::KT_Msg& msg, KIARA::Transpor
 		
 		if (ServiceHandler *serviceHandler = server->findAcceptingServiceHandler(addr))
 		{
-			DBuffer *response = new DBuffer();
-			serviceHandler->performCallZmq(answer.c_str(), answer.length(), response);
+			
+			serviceHandler->performCallZmq((const char*)msg.get_payload_binary(), msg.get_size(), response);
 			res.append(response->data());
 			
 			std::string res_final;
@@ -532,7 +533,7 @@ std::string callback_handler_mt ( KIARA::Transport::KT_Msg& msg, KIARA::Transpor
 		}
 	}
 	
-	return payload;
+	return response;
 }
 
 void callback_handler ( KIARA::Transport::KT_Msg& msg, KIARA::Transport::KT_Session* sess, KIARA::Transport::KT_Connection* connection ) {

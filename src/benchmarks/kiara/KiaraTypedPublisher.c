@@ -141,7 +141,7 @@ int main(int argc, char **argv)
     if (argc > 1)
         url = argv[1];
     else
-        url = "http://localhost:8080/service";
+        url = "http://192.168.56.101:8080/service";
 
     /* Initialize connection and generate functions */
     initConn(url);

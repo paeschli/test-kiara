@@ -13,6 +13,7 @@
 #include <string>
 #include <map>
 #include <functional>
+#include <KIARA/Utils/DBuffer.hpp>
 
 #include "KT_Configuration.hpp"
 #include "KT_Msg.hpp"
@@ -40,7 +41,7 @@ protected:
   std::map< std::string, KT_Session* >* _sessions;
   KT_Configuration _configuration;
   std::function<void(KT_Msg&, KT_Session*, KT_Connection*)> _std_callback;
-  std::function<std::string(KT_Msg&, KT_Session*, KT_Connection*)> _std_callback_str;
+  std::function<DBuffer*(KT_Msg&, KT_Session*, KT_Connection*)> _std_callback_str;
   
 public:
 
@@ -97,7 +98,7 @@ public:
   register_callback (std::function<void(KT_Msg&, KT_Session*, KT_Connection*)>) = 0;
   
   virtual int
-  register_callback_str (std::function<std::string(KT_Msg&, KT_Session*, KT_Connection*)>) = 0;
+  register_callback_str (std::function<DBuffer*(KT_Msg&, KT_Session*, KT_Connection*)>) = 0;
 
   /**
    * @brief bind requires a valid callback handler which is called when a message is

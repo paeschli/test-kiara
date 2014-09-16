@@ -175,7 +175,13 @@ KT_Zeromq::send(KT_Msg& message, KT_Session& session, int linger) {
     }
 
     // Now actually send the passed message.
-    int rc = zmq_send(session.get_socket(), message.get_payload().data(), message.get_payload().size(), 0);
+	int rc;
+	if(message.is_binary_transport()) {
+		rc = zmq_send(session.get_socket(), message.get_payload_binary(), message.get_size(), 0);
+	}
+	else {
+		rc = zmq_send(session.get_socket(), message.get_payload().data(), message.get_payload().size(), 0);
+	}
     int errcode = errno;
     if (message.get_payload().size() != static_cast<std::vector<char>::size_type> (rc)) {
         errno = errcode;
@@ -229,6 +235,8 @@ KT_Zeromq::recv(KT_Session& session, KT_Msg& ret, int linger) {
     }
 
     // Store the received payload in the KT_Msg *ret
+	ret.set_payload((const void*) zmq_msg_data(&msg));
+	ret.set_size((size_t)size);
     char* msg_ptr = (char*) zmq_msg_data(&msg);
     buffer = std::vector<char>(msg_ptr, msg_ptr + size);
 
@@ -263,7 +271,7 @@ KT_Zeromq::register_callback(std::function<void(KT_Msg&, KT_Session*, KT_Connect
 }
 
 int
-KT_Zeromq::register_callback_str(std::function<std::string(KT_Msg&, KT_Session*, KT_Connection*) > callback) {
+KT_Zeromq::register_callback_str(std::function<DBuffer*(KT_Msg&, KT_Session*, KT_Connection*) > callback) {
     _std_callback_str = callback;
     return 0;
 }
@@ -349,7 +357,7 @@ KT_Zeromq::proxy(KT_Session* session, std::string binding_name) {
 	zmq::socket_t workers(_context_mt, ZMQ_DEALER);
 	workers.bind ("inproc://workers");
 	
-	for (int thread_nbr = 0; thread_nbr != 5; thread_nbr++) {
+	for (int thread_nbr = 0; thread_nbr != 1; thread_nbr++) {
 		worker_thread = new std::thread(&KT_Zeromq::worker, this, (void *) &_context_mt, binding_name);
 		std::cout << "Adding Thread " << worker_thread->get_id() << std::endl;
 	}
@@ -367,20 +375,23 @@ KT_Zeromq::worker(void *arg, std::string endpoint){
         socket.recv (&request);
 		
 		char* msg_ptr = (char*) request.data();
-		
-		std::vector<char> buffer;
-		buffer = std::vector<char>(msg_ptr, msg_ptr + request.size());
+		//std::cout << msg_ptr << std::endl;
 		
 		KT_Msg* ret = new KT_Msg;
-
-		ret->set_payload(buffer);
+		
+		ret->set_payload( (const void*) request.data() );
+		ret->set_size( (size_t) request.size() );
 		KT_Session* sess = _sessions->find(endpoint)->second;
 		//call kiara
-		std::string resp = _std_callback_str(*ret, sess, this);
+		DBuffer *res = _std_callback_str(*ret, sess, this);
+		
+		std::cout << res->data() << std::endl;
+		
+		std::string resp;
 		//std::cout << std::this_thread::get_id() << std::endl;
         //  Send reply back to client
-        zmq::message_t reply(resp.length());
-        memcpy ((void *) reply.data (), (char *)resp.c_str(), resp.length());
+        zmq::message_t reply((int)res->size());
+        memcpy ((void *) reply.data(), res->data(), (int)res->size());
         socket.send (reply);
     }
 }

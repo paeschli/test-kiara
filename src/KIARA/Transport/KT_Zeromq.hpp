@@ -28,6 +28,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <KIARA/Utils/DBuffer.hpp>
 
 #include "k_transport.h"
 #include "KT_Configuration.hpp"
@@ -77,7 +78,7 @@ public:
 
   int
   recv(KT_Session& session, KT_Msg& ret, int linger = 0);
-
+  
   int
   disconnect(KT_Session& session);
 
@@ -85,7 +86,7 @@ public:
   register_callback(std::function<void(KT_Msg&, KT_Session*, KT_Connection*)>);
   
   int
-  register_callback_str(std::function<std::string(KT_Msg&, KT_Session*, KT_Connection*)>);
+  register_callback_str(std::function<DBuffer*(KT_Msg&, KT_Session*, KT_Connection*)>);
   
   void
   worker(void *arg, std::string endpoint);
